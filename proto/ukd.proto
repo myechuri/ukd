@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// The service definition.
+service UKd {
+  // Start a Unikernel.
+  rpc StartUK (StartRequest) returns (StartReply) {}
+}
+
+// The request message containing the image name
+// and image location.
+message StartRequest {
+  string name = 1;
+  string location = 2;
+}
+
+// The response message signalling result of start attempt.
+message StartReply {
+  bool success = 1;
+  string ip = 2; // IP of the running unikernel.
+}
