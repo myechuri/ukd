@@ -4,17 +4,30 @@ syntax = "proto3";
 service UKd {
   // Start a Unikernel.
   rpc StartUK (StartRequest) returns (StartReply) {}
+
+  // Stop a Unikernel.
+  rpc StopUK (StopRequest) returns (StopReply) {}
 }
 
 // The request message containing the image name
 // and image location.
 message StartRequest {
   string name = 1;
-  string location = 2;
+  string location = 2; // location of .img
 }
 
 // The response message signalling result of start attempt.
 message StartReply {
   bool success = 1;
   string ip = 2; // IP of the running unikernel.
+}
+
+// The request message containing the image name.
+message StopRequest {
+  string name = 1;
+}
+
+// The response message signalling result of stop attempt.
+message StopReply {
+  bool success = 1;
 }
