@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 // Service definition.
-service UKd {
+service Ukd {
   // Start a Unikernel.
   rpc StartUK (StartRequest) returns (StartReply) {}
 

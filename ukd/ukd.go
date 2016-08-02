@@ -1,21 +1,40 @@
 package main
 
 import (
-    "google.golang.org/grpc"
-    "github.com/myechuri/ukd/proto"
-    "fmt"
-    "os"
-    "github.com/urfave/cli"
+	"fmt"
+	"net"
+
+	"fmt"
+	"github.com/myechuri/ukd/server"
+	"github.com/myechuri/ukd/server/proto"
+	"github.com/urfave/cli"
+	"google.golang.org/grpc"
+	"os"
 )
 
 func main() {
-  app := cli.NewApp()
-  app.Name = "ukd"
-  app.Usage = "ukd usage"
-  app.Action = func(c *cli.Context) error {
-    // Create grpc server for ukd
-    return nil
-  }
+	app := cli.NewApp()
+	app.Name = "ukd"
+	app.Usage = "ukd usage"
+	app.Action = func(c *cli.Context) error {
+		// Create and start grpc server for ukd
+		err = startUkdServer(c)
 
-  app.Run(os.Args)
+		return err
+	}
+	app.Run(os.Args)
+}
+
+func startUKdServer(c *cli.Context) error {
+	protocol = c.String("protocol")
+	port = c.String("port")
+
+	// TODO: Validate protocol.
+	lis, err := net.Listen(protocol, fmt.Sprintf(":%d", *port))
+	grpcServer := grpc.NewServer()
+	s := server.NewServer()
+	pb.RegisterUKdServer(grpcServer, s)
+
+	// TODO: TLS.
+	grpcServer.Serve(lis)
 }

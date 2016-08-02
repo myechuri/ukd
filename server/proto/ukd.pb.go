@@ -71,89 +71,89 @@ func (*StopReply) ProtoMessage()    {}
 func init() {
 }
 
-// Client API for UKd service
+// Client API for Ukd service
 
-type UKdClient interface {
+type UkdClient interface {
 	// Start a Unikernel.
 	StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error)
 	// Stop a Unikernel.
 	StopUK(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopReply, error)
 }
 
-type uKdClient struct {
+type ukdClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewUKdClient(cc *grpc.ClientConn) UKdClient {
-	return &uKdClient{cc}
+func NewUkdClient(cc *grpc.ClientConn) UkdClient {
+	return &ukdClient{cc}
 }
 
-func (c *uKdClient) StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error) {
+func (c *ukdClient) StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error) {
 	out := new(StartReply)
-	err := grpc.Invoke(ctx, "/.UKd/StartUK", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/.Ukd/StartUK", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *uKdClient) StopUK(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopReply, error) {
+func (c *ukdClient) StopUK(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopReply, error) {
 	out := new(StopReply)
-	err := grpc.Invoke(ctx, "/.UKd/StopUK", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/.Ukd/StopUK", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for UKd service
+// Server API for Ukd service
 
-type UKdServer interface {
+type UkdServer interface {
 	// Start a Unikernel.
 	StartUK(context.Context, *StartRequest) (*StartReply, error)
 	// Stop a Unikernel.
 	StopUK(context.Context, *StopRequest) (*StopReply, error)
 }
 
-func RegisterUKdServer(s *grpc.Server, srv UKdServer) {
-	s.RegisterService(&_UKd_serviceDesc, srv)
+func RegisterUkdServer(s *grpc.Server, srv UkdServer) {
+	s.RegisterService(&_Ukd_serviceDesc, srv)
 }
 
-func _UKd_StartUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Ukd_StartUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
 	in := new(StartRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
-	out, err := srv.(UKdServer).StartUK(ctx, in)
+	out, err := srv.(UkdServer).StartUK(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func _UKd_StopUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Ukd_StopUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
 	in := new(StopRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
-	out, err := srv.(UKdServer).StopUK(ctx, in)
+	out, err := srv.(UkdServer).StopUK(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-var _UKd_serviceDesc = grpc.ServiceDesc{
-	ServiceName: ".UKd",
-	HandlerType: (*UKdServer)(nil),
+var _Ukd_serviceDesc = grpc.ServiceDesc{
+	ServiceName: ".Ukd",
+	HandlerType: (*UkdServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "StartUK",
-			Handler:    _UKd_StartUK_Handler,
+			Handler:    _Ukd_StartUK_Handler,
 		},
 		{
 			MethodName: "StopUK",
-			Handler:    _UKd_StopUK_Handler,
+			Handler:    _Ukd_StopUK_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},
