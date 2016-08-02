@@ -18,11 +18,19 @@ package ukd
 
 import proto "github.com/golang/protobuf/proto"
 
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 
-// The request message containing the image name
-// and image location.
+// Request message containing image name and image location.
 type StartRequest struct {
 	Name     string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	Location string `protobuf:"bytes,2,opt,name=location" json:"location,omitempty"`
@@ -32,7 +40,7 @@ func (m *StartRequest) Reset()         { *m = StartRequest{} }
 func (m *StartRequest) String() string { return proto.CompactTextString(m) }
 func (*StartRequest) ProtoMessage()    {}
 
-// The response message signalling result of start attempt.
+// Response message signalling result of start attempt.
 type StartReply struct {
 	Success bool   `protobuf:"varint,1,opt,name=success" json:"success,omitempty"`
 	Ip      string `protobuf:"bytes,2,opt,name=ip" json:"ip,omitempty"`
@@ -42,7 +50,7 @@ func (m *StartReply) Reset()         { *m = StartReply{} }
 func (m *StartReply) String() string { return proto.CompactTextString(m) }
 func (*StartReply) ProtoMessage()    {}
 
-// The request message containing the image name.
+// Request message containing the image name.
 type StopRequest struct {
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
@@ -51,7 +59,7 @@ func (m *StopRequest) Reset()         { *m = StopRequest{} }
 func (m *StopRequest) String() string { return proto.CompactTextString(m) }
 func (*StopRequest) ProtoMessage()    {}
 
-// The response message signalling result of stop attempt.
+// Response message signalling result of stop attempt.
 type StopReply struct {
 	Success bool `protobuf:"varint,1,opt,name=success" json:"success,omitempty"`
 }
@@ -61,4 +69,92 @@ func (m *StopReply) String() string { return proto.CompactTextString(m) }
 func (*StopReply) ProtoMessage()    {}
 
 func init() {
+}
+
+// Client API for UKd service
+
+type UKdClient interface {
+	// Start a Unikernel.
+	StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error)
+	// Stop a Unikernel.
+	StopUK(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopReply, error)
+}
+
+type uKdClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewUKdClient(cc *grpc.ClientConn) UKdClient {
+	return &uKdClient{cc}
+}
+
+func (c *uKdClient) StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error) {
+	out := new(StartReply)
+	err := grpc.Invoke(ctx, "/.UKd/StartUK", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *uKdClient) StopUK(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopReply, error) {
+	out := new(StopReply)
+	err := grpc.Invoke(ctx, "/.UKd/StopUK", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for UKd service
+
+type UKdServer interface {
+	// Start a Unikernel.
+	StartUK(context.Context, *StartRequest) (*StartReply, error)
+	// Stop a Unikernel.
+	StopUK(context.Context, *StopRequest) (*StopReply, error)
+}
+
+func RegisterUKdServer(s *grpc.Server, srv UKdServer) {
+	s.RegisterService(&_UKd_serviceDesc, srv)
+}
+
+func _UKd_StartUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(StartRequest)
+	if err := codec.Unmarshal(buf, in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(UKdServer).StartUK(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _UKd_StopUK_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(StopRequest)
+	if err := codec.Unmarshal(buf, in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(UKdServer).StopUK(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+var _UKd_serviceDesc = grpc.ServiceDesc{
+	ServiceName: ".UKd",
+	HandlerType: (*UKdServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "StartUK",
+			Handler:    _UKd_StartUK_Handler,
+		},
+		{
+			MethodName: "StopUK",
+			Handler:    _UKd_StopUK_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{},
 }

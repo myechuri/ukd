@@ -15,8 +15,8 @@ If you make changes to ``ukd.proto``, please regenerate ``ukd.pb.go`` by followi
 apt install golang-goprotobuf-dev
 ```
 
-3. Run ``protoc`` to generate ``ukd.pb.go``.
+4. Run ``protoc`` to generate ``ukd.pb.go``.
 
 ```
-protoc -I=$PWD --go_out=$PWD $PWD/ukd.proto
+protoc -I=$PWD --go_out=plugins=grpc:.  $PWD/ukd.proto
 ```
