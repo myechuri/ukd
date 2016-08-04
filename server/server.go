@@ -7,6 +7,15 @@ import (
 )
 
 type ukdServer struct {
+        
+}
+
+func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
+        reply := api.VersionReply{
+                major: s.version.major,
+                minor: s.version.minor}
+	grpclog.Fatalf("Version request")
+        return &reply, nil
 }
 
 func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (*api.StartReply, error) {

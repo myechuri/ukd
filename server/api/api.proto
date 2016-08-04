@@ -2,11 +2,23 @@ syntax = "proto3";
 
 // Service definition.
 service Ukd {
+  // Get Server Version.
+  rpc GetVersion (VersionRequest) returns (VersionReply) {}
+
   // Start a Unikernel.
   rpc StartUK (StartRequest) returns (StartReply) {}
 
   // Stop a Unikernel.
   rpc StopUK (StopRequest) returns (StopReply) {}
+}
+
+message VersionRequest {
+}
+
+// Ukd server version.
+message VersionReply {
+  int32 major = 1;
+  int32 minor = 2;
 }
 
 // Request message containing image name and image location.

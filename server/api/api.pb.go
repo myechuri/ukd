@@ -9,6 +9,8 @@ It is generated from these files:
 	api.proto
 
 It has these top-level messages:
+	VersionRequest
+	VersionReply
 	StartRequest
 	StartReply
 	StopRequest
@@ -36,6 +38,25 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type VersionRequest struct {
+}
+
+func (m *VersionRequest) Reset()                    { *m = VersionRequest{} }
+func (m *VersionRequest) String() string            { return proto.CompactTextString(m) }
+func (*VersionRequest) ProtoMessage()               {}
+func (*VersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+// Ukd server version.
+type VersionReply struct {
+	Major int32 `protobuf:"varint,1,opt,name=major" json:"major,omitempty"`
+	Minor int32 `protobuf:"varint,2,opt,name=minor" json:"minor,omitempty"`
+}
+
+func (m *VersionReply) Reset()                    { *m = VersionReply{} }
+func (m *VersionReply) String() string            { return proto.CompactTextString(m) }
+func (*VersionReply) ProtoMessage()               {}
+func (*VersionReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
 // Request message containing image name and image location.
 type StartRequest struct {
 	Name     string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
@@ -45,7 +66,7 @@ type StartRequest struct {
 func (m *StartRequest) Reset()                    { *m = StartRequest{} }
 func (m *StartRequest) String() string            { return proto.CompactTextString(m) }
 func (*StartRequest) ProtoMessage()               {}
-func (*StartRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*StartRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 // Response message signalling result of start attempt.
 type StartReply struct {
@@ -56,7 +77,7 @@ type StartReply struct {
 func (m *StartReply) Reset()                    { *m = StartReply{} }
 func (m *StartReply) String() string            { return proto.CompactTextString(m) }
 func (*StartReply) ProtoMessage()               {}
-func (*StartReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*StartReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 // Request message containing the image name.
 type StopRequest struct {
@@ -66,7 +87,7 @@ type StopRequest struct {
 func (m *StopRequest) Reset()                    { *m = StopRequest{} }
 func (m *StopRequest) String() string            { return proto.CompactTextString(m) }
 func (*StopRequest) ProtoMessage()               {}
-func (*StopRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*StopRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 // Response message signalling result of stop attempt.
 type StopReply struct {
@@ -76,9 +97,11 @@ type StopReply struct {
 func (m *StopReply) Reset()                    { *m = StopReply{} }
 func (m *StopReply) String() string            { return proto.CompactTextString(m) }
 func (*StopReply) ProtoMessage()               {}
-func (*StopReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*StopReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func init() {
+	proto.RegisterType((*VersionRequest)(nil), "VersionRequest")
+	proto.RegisterType((*VersionReply)(nil), "VersionReply")
 	proto.RegisterType((*StartRequest)(nil), "StartRequest")
 	proto.RegisterType((*StartReply)(nil), "StartReply")
 	proto.RegisterType((*StopRequest)(nil), "StopRequest")
@@ -96,6 +119,8 @@ const _ = grpc.SupportPackageIsVersion3
 // Client API for Ukd service
 
 type UkdClient interface {
+	// Get Server Version.
+	GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionReply, error)
 	// Start a Unikernel.
 	StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error)
 	// Stop a Unikernel.
@@ -108,6 +133,15 @@ type ukdClient struct {
 
 func NewUkdClient(cc *grpc.ClientConn) UkdClient {
 	return &ukdClient{cc}
+}
+
+func (c *ukdClient) GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionReply, error) {
+	out := new(VersionReply)
+	err := grpc.Invoke(ctx, "/Ukd/GetVersion", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *ukdClient) StartUK(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartReply, error) {
@@ -131,6 +165,8 @@ func (c *ukdClient) StopUK(ctx context.Context, in *StopRequest, opts ...grpc.Ca
 // Server API for Ukd service
 
 type UkdServer interface {
+	// Get Server Version.
+	GetVersion(context.Context, *VersionRequest) (*VersionReply, error)
 	// Start a Unikernel.
 	StartUK(context.Context, *StartRequest) (*StartReply, error)
 	// Stop a Unikernel.
@@ -139,6 +175,24 @@ type UkdServer interface {
 
 func RegisterUkdServer(s *grpc.Server, srv UkdServer) {
 	s.RegisterService(&_Ukd_serviceDesc, srv)
+}
+
+func _Ukd_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UkdServer).GetVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ukd/GetVersion",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UkdServer).GetVersion(ctx, req.(*VersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Ukd_StartUK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -182,6 +236,10 @@ var _Ukd_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*UkdServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetVersion",
+			Handler:    _Ukd_GetVersion_Handler,
+		},
+		{
 			MethodName: "StartUK",
 			Handler:    _Ukd_StartUK_Handler,
 		},
@@ -197,17 +255,21 @@ var _Ukd_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("api.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 192 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x7c, 0x50, 0xbd, 0xce, 0x82, 0x30,
-	0x14, 0x05, 0xbe, 0x2f, 0xfc, 0x5c, 0xd0, 0xe1, 0x4e, 0x84, 0x49, 0x1b, 0x8d, 0x4e, 0x1d, 0x34,
-	0x71, 0xf4, 0x05, 0xdc, 0x40, 0x1e, 0xa0, 0x62, 0x07, 0x22, 0xd2, 0x4a, 0xcb, 0xe0, 0xdb, 0x8b,
-	0x15, 0x91, 0x89, 0xed, 0x9c, 0xe6, 0xfc, 0xf5, 0x42, 0xc0, 0x64, 0x49, 0x65, 0x23, 0xb4, 0x20,
-	0x47, 0x88, 0x32, 0xcd, 0x1a, 0x9d, 0xf2, 0x47, 0xcb, 0x95, 0x46, 0x84, 0xff, 0x9a, 0xdd, 0x79,
-	0x6c, 0x2f, 0xec, 0x6d, 0x90, 0x1a, 0x8c, 0x09, 0xf8, 0x95, 0x28, 0x98, 0x2e, 0x45, 0x1d, 0x3b,
-	0xe6, 0x7d, 0xe0, 0xe4, 0x00, 0xd0, 0xfb, 0x65, 0xf5, 0xc4, 0x18, 0x3c, 0xd5, 0x16, 0x05, 0x57,
-	0xca, 0x04, 0xf8, 0xe9, 0x97, 0xe2, 0x1c, 0x9c, 0x52, 0xf6, 0xee, 0x0e, 0x91, 0x25, 0x84, 0x99,
-	0x16, 0x72, 0xa2, 0x96, 0xac, 0x21, 0xf8, 0x48, 0x26, 0x93, 0x77, 0x67, 0xf8, 0xcb, 0x6f, 0x57,
-	0xdc, 0x80, 0x67, 0x86, 0xe4, 0x27, 0x9c, 0xd1, 0xf1, 0x97, 0x92, 0x90, 0xfe, 0x16, 0x12, 0x0b,
-	0x57, 0xe0, 0xbe, 0x63, 0x3b, 0x5d, 0x44, 0x47, 0x13, 0x12, 0xa0, 0x43, 0x1b, 0xb1, 0x2e, 0xae,
-	0x39, 0xcf, 0xfe, 0x15, 0x00, 0x00, 0xff, 0xff, 0x0b, 0x0e, 0x14, 0x10, 0x2b, 0x01, 0x00, 0x00,
+	// 252 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x7c, 0x51, 0x3d, 0x4f, 0xc3, 0x30,
+	0x14, 0x6c, 0x0a, 0xfd, 0xc8, 0x35, 0x2d, 0xe8, 0x89, 0xa1, 0xca, 0x04, 0x16, 0x08, 0x26, 0x0f,
+	0x20, 0x31, 0x30, 0xb0, 0x32, 0xb0, 0xb9, 0x2a, 0xbb, 0x09, 0x1e, 0x02, 0x6d, 0x6c, 0x6c, 0x77,
+	0x60, 0xe7, 0x87, 0xe3, 0xb8, 0x26, 0x84, 0xa5, 0xdb, 0xbb, 0xd3, 0xbb, 0x77, 0xe7, 0x33, 0x72,
+	0x69, 0x6a, 0x6e, 0xac, 0xf6, 0x9a, 0x9d, 0x62, 0xf1, 0xa2, 0xac, 0xab, 0x75, 0x23, 0xd4, 0xe7,
+	0x4e, 0x39, 0xcf, 0x1e, 0x50, 0x74, 0x8c, 0xd9, 0x7c, 0xd1, 0x19, 0x46, 0x5b, 0xf9, 0xae, 0xed,
+	0x32, 0x3b, 0xcf, 0x6e, 0x46, 0x62, 0x0f, 0x22, 0x5b, 0x37, 0x81, 0x1d, 0x26, 0xb6, 0x05, 0xec,
+	0x11, 0xc5, 0xca, 0x4b, 0xeb, 0xd3, 0x2d, 0x22, 0x1c, 0x37, 0x72, 0xab, 0xa2, 0x34, 0x17, 0x71,
+	0xa6, 0x12, 0xd3, 0x8d, 0xae, 0xa4, 0x0f, 0x06, 0x51, 0x9c, 0x8b, 0x0e, 0xb3, 0x7b, 0x20, 0xe9,
+	0x5b, 0xe7, 0x25, 0x26, 0x6e, 0x57, 0x55, 0xca, 0xb9, 0x78, 0x60, 0x2a, 0x7e, 0x21, 0x2d, 0x30,
+	0xac, 0x4d, 0x52, 0x87, 0x89, 0x5d, 0x60, 0xb6, 0xf2, 0xda, 0x1c, 0xb0, 0x65, 0x57, 0xc8, 0xf7,
+	0x2b, 0x07, 0x2f, 0xdf, 0x7e, 0x67, 0x38, 0x5a, 0x7f, 0xbc, 0x11, 0x07, 0x9e, 0x94, 0x4f, 0x45,
+	0xd0, 0x09, 0xff, 0x5f, 0x52, 0x39, 0xe7, 0xfd, 0x8e, 0xd8, 0x80, 0xae, 0x31, 0x89, 0xc9, 0xd7,
+	0xcf, 0x34, 0xe7, 0xfd, 0x0e, 0xca, 0x19, 0xff, 0x7b, 0x52, 0x58, 0xbc, 0xc4, 0xb8, 0xcd, 0x11,
+	0xf6, 0x0a, 0xde, 0xcb, 0x5c, 0x82, 0x77, 0xf1, 0xd8, 0xe0, 0x75, 0x1c, 0x7f, 0xe7, 0xee, 0x27,
+	0x00, 0x00, 0xff, 0xff, 0x19, 0x91, 0x31, 0xef, 0xaa, 0x01, 0x00, 0x00,
 }
