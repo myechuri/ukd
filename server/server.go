@@ -6,14 +6,20 @@ import (
 	"google.golang.org/grpc/grpclog"
 )
 
+type version_type struct {
+    Major int32
+    Minor int32
+}
+
 type ukdServer struct {
+    Version version_type
         
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
         reply := api.VersionReply{
-                major: s.version.major,
-                minor: s.version.minor}
+                Major: s.Version.Major,
+                Minor: s.Version.Minor}
 	grpclog.Fatalf("Version request")
         return &reply, nil
 }
