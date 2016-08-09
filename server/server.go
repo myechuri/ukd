@@ -13,14 +13,13 @@ type version_type struct {
 
 type ukdServer struct {
     Version version_type
-        
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
         reply := api.VersionReply{
                 Major: s.Version.Major,
                 Minor: s.Version.Minor}
-	grpclog.Fatalf("Version request")
+	grpclog.Printf("Version request")
         return &reply, nil
 }
 
@@ -28,19 +27,19 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
         reply := api.StartReply{
                 Success: true,
                 Ip: "10.0.0.4"}
-	grpclog.Fatalf("Start request")
+	grpclog.Printf("Start request")
         return &reply, nil
 }
 
 func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
         reply := api.StopReply{
                 Success: true}
-	grpclog.Fatalf("Stop request")
+	grpclog.Printf("Stop request")
         return &reply, nil
 
 }
 
 func NewServer() *ukdServer {
-        s := &ukdServer{}
+        s := &ukdServer{Version: version_type{Major: 0, Minor: 1 }}
 	return s
 }

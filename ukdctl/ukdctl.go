@@ -27,7 +27,7 @@ func getServerVersion(client api.UkdClient) {
 	if err != nil {
 		log.Fatalf("could not gather grpc server version: %v", err)
 	}
-	log.Printf("Grpc server version: %d.%d", reply.Major, reply.Minor)
+	log.Printf("Ukd server version: %d.%d", reply.Major, reply.Minor)
 
 }
 
