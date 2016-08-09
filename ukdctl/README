@@ -1,0 +1,13 @@
+# CLI client for ``ukd``
+
+## Install dependecies
+
+```
+go get github.com/spf13/cobra
+```
+
+## Install ukdctl
+
+```
+go install
+```
