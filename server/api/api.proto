@@ -31,6 +31,7 @@ message StartRequest {
 message StartReply {
   bool success = 1;
   string ip = 2; // IP of the running unikernel.
+  string reason = 3; // reason for failure to start, if any.
 }
 
 // Request message containing the image name.
@@ -41,4 +42,5 @@ message StopRequest {
 // Response message signalling result of stop attempt.
 message StopReply {
   bool success = 1;
+  string reason = 2; // reason for failure to start, if any.
 }

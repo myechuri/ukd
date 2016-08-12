@@ -11,26 +11,45 @@ import (
 	"os"
 )
 
+const (
+	defaultProtocol = "tcp"
+	defaultPort     = 54545
+)
+
+var (
+	protocol string
+	port     int64
+)
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "ukd"
-	app.Usage = "ukd usage"
+	app.Usage = "Unikernel Node Runtime Server"
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "protocol",
+			Value:       defaultProtocol,
+			Usage:       "grpc server protocol",
+			Destination: &protocol,
+		},
+		cli.Int64Flag{
+			Name:        "port",
+			Value:       defaultPort,
+			Usage:       "grpc server port",
+			Destination: &port,
+		},
+	}
+
 	app.Action = func(c *cli.Context) error {
 		// Create and start grpc server for ukd
-		startUkdServer(c)
-                return nil
+		startUkdServer(protocol, port)
+		return nil
 	}
 	app.Run(os.Args)
 }
 
-func startUkdServer(c *cli.Context) error {
-        // TODO: Gather protocol and port from command line.
-	// protocol := c.String("protocol")
-	// port := c.String("port")
-	protocol := "tcp"
-	port := 55555
-
-	// TODO: Validate protocol.
+func startUkdServer(protocol string, port int64) error {
+	// TODO: Validate protocol and port.
 	lis, _ := net.Listen(protocol, fmt.Sprintf(":%d", port))
 	grpcServer := grpc.NewServer()
 	s := server.NewServer()
@@ -38,5 +57,5 @@ func startUkdServer(c *cli.Context) error {
 
 	// TODO: TLS.
 	grpcServer.Serve(lis)
-        return nil
+	return nil
 }
