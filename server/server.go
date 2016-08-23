@@ -34,7 +34,7 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
         "-gdb", "tcp::1234,server,nowait",
         "-device", "virtio-blk-pci,id=blk0,bootindex=0,drive=hd0,scsi=off",
         "-drive", "file=/root/osv/build/debug/usr.img,if=none,id=hd0,cache=none,aio=native",
-        "-netdev", "tap,id=hn0,script=scripts/qemu-ifup.sh,vhost=on",
+        "-netdev", "tap,id=hn0,script=/root/osv/scripts/qemu-ifup.sh,vhost=on",
         "-device", "virtio-net-pci,netdev=hn0,id=nic0",
         "-redir", "tcp:2222::22",
         "-device", "virtio-rng-pci",
@@ -44,8 +44,10 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
         "-mon", "chardev=stdio,mode=readline,default",
         "-device", "isa-serial,chardev=stdio", }
         cmd := exec.Command(cmdName, args...)
-        if err := cmd.Start(); err != nil {
-            grpclog.Fatalf(err)
+        // if err := cmd.Start(); err != nil {
+        if out, _ := cmd.CombinedOutput(); out != nil {
+            //grpclog.Fatalf(err.Error())
+            grpclog.Fatalf(string(out))
         }
 	reply := api.StartReply{
 		Success: false,
