@@ -1,7 +1,10 @@
 package server
 
 import (
+        "io"
+        "os"
         "os/exec"
+        "io/ioutil"
 	"github.com/myechuri/ukd/server/api"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
@@ -26,6 +29,23 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 
 func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
         grpclog.Printf("StartUK request: name: %s, Image: %s", request.Name, request.Location)
+
+        driveArg := "file=" + request.Location + ",if=none,id=hd0,cache=none,aio=native"
+
+        // Compose application-specific configuration.
+        configRoot := "/var/lib/ukd"
+        os.Mkdir(configRoot, 0777) // TODO: check error
+        configRoot += "/" + request.Name
+        os.Mkdir(configRoot, 0777) // TODO: check error
+        qemuIfupByteArray := []byte("#!/bin/sh\n" +
+                                    "brctl stp virbr0 off\n" +
+                                    "brctl addif virbr0 $1\n" +
+                                    "ifconfig $1 up\n")
+        configRoot += "/qemu-ifup.sh"
+        ioutil.WriteFile(configRoot, qemuIfupByteArray, 0700) // TODO: check error
+        netdevArg := "tap,id=hn0,script=" + configRoot + ",vhost=on"
+        grpclog.Printf(netdevArg)
+
         cmdName := "qemu-system-x86_64"
         args := []string{
         "-m", "2G",
@@ -33,8 +53,8 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
         "-vnc", ":1",
         "-gdb", "tcp::1234,server,nowait",
         "-device", "virtio-blk-pci,id=blk0,bootindex=0,drive=hd0,scsi=off",
-        "-drive", "file=/root/osv/build/debug/usr.img,if=none,id=hd0,cache=none,aio=native",
-        "-netdev", "tap,id=hn0,script=/root/osv/scripts/qemu-ifup.sh,vhost=on",
+        "-drive", driveArg,
+        "-netdev", netdevArg,
         "-device", "virtio-net-pci,netdev=hn0,id=nic0",
         "-redir", "tcp:2222::22",
         "-device", "virtio-rng-pci",
@@ -45,6 +65,10 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
         "-device", "isa-serial,chardev=stdio", }
         cmd := exec.Command(cmdName, args...)
         // if err := cmd.Start(); err != nil {
+        // out, _ := cmd.Output()
+        stdout, _ := cmd.StdoutPipe()
+        cmd.Start()
+        go io.Copy(os.Stdout, stdout)
         if out, _ := cmd.CombinedOutput(); out != nil {
             //grpclog.Fatalf(err.Error())
             grpclog.Fatalf(string(out))

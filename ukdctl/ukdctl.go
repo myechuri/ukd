@@ -20,7 +20,9 @@ var (
 		Short:      cliDescription,
 		SuggestFor: []string{"ukdctl"},
 	}
-	serverAddress string
+	serverAddress string // used by rootCmd
+        ukName string        // used by startCmd, stopCmd
+        imageLocation string // used by startCmd
 )
 
 func getServerVersion(client api.UkdClient) {
@@ -33,10 +35,10 @@ func getServerVersion(client api.UkdClient) {
 
 }
 
-func startUK(client api.UkdClient) {
+func startUK(client api.UkdClient, args []string) {
 	startRequest := &api.StartRequest{
-		Name:     "test app",
-		Location: "/var/lib/ukd/images/testapp.img",
+		Name:     ukName,
+		Location: imageLocation,
 	}
 	reply, _ := client.StartUK(context.Background(), startRequest)
 	log.Printf("Application unikernel started: %t, IP: %s, Reason: %s",
@@ -54,7 +56,6 @@ func stopUK(client api.UkdClient) {
 
 func main() {
 
-	// TODO: Gather grpc server address from command line input.
 	rootCmd.PersistentFlags().StringVar(&serverAddress, "server-endpoint", defaultServer, "server IP and Port ('ip:port') to connect to")
 
 	// TODO: TLS
@@ -65,7 +66,7 @@ func main() {
 	defer conn.Close()
 	client := api.NewUkdClient(conn)
 
-	var versionCommand = &cobra.Command{
+	var versionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "Get server version",
 		Long:  `Get grpc server version`,
@@ -73,17 +74,19 @@ func main() {
 			getServerVersion(client)
 		},
 	}
-	rootCmd.AddCommand(versionCommand)
+	rootCmd.AddCommand(versionCmd)
 
-	var startCommand = &cobra.Command{
-		Use:   "startUK",
+	var startCmd = &cobra.Command{
+		Use:   "startUK [name] [image location]",
 		Short: "Start a Unikernel",
-		Long:  `Start a unikernel with given manifest`,
+		Long:  `Start a unikernel with a given name and image location`,
 		Run: func(cmd *cobra.Command, args []string) {
-			startUK(client)
+			startUK(client, args)
 		},
 	}
-	rootCmd.AddCommand(startCommand)
+	startCmd.Flags().StringVar(&ukName, "name", "", "name of the application")
+	startCmd.Flags().StringVar(&imageLocation, "image-location", "", "location of the application image")
+	rootCmd.AddCommand(startCmd)
 
 	var stopCommand = &cobra.Command{
 		Use:   "stopUK",
