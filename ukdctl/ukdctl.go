@@ -21,8 +21,8 @@ var (
 		SuggestFor: []string{"ukdctl"},
 	}
 	serverAddress string // used by rootCmd
-        ukName string        // used by startCmd, stopCmd
-        imageLocation string // used by startCmd
+	ukName        string // used by startCmd, stopCmd
+	imageLocation string // used by startCmd
 )
 
 func getServerVersion(client api.UkdClient) {
