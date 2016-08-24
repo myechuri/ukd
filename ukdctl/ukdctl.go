@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/myechuri/ukd/server/api"
+	"github.com/myechuri/ukd/ukdctl/cmd"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -21,8 +22,7 @@ var (
 		SuggestFor: []string{"ukdctl"},
 	}
 	serverAddress string // used by rootCmd
-	ukName        string // used by startCmd, stopCmd
-	imageLocation string // used by startCmd
+	ukName        string // used by stopCmd
 )
 
 func getServerVersion(client api.UkdClient) {
@@ -35,23 +35,13 @@ func getServerVersion(client api.UkdClient) {
 
 }
 
-func startUK(client api.UkdClient, args []string) {
-	startRequest := &api.StartRequest{
-		Name:     ukName,
-		Location: imageLocation,
-	}
-	reply, _ := client.StartUK(context.Background(), startRequest)
-	log.Printf("Application unikernel started: %t, IP: %s, Reason: %s",
-		reply.Success, reply.Ip, reply.Reason)
-}
-
 func stopUK(client api.UkdClient) {
 	stopRequest := &api.StopRequest{
 		Name: "test app",
 	}
 	reply, _ := client.StopUK(context.Background(), stopRequest)
-	log.Printf("Application unikernel stopped: %t, Reason: %s",
-		reply.Success, reply.Reason)
+	log.Printf("Application unikernel stopped: %t, Info: %s",
+		reply.Success, reply.Info)
 }
 
 func main() {
@@ -76,17 +66,7 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
-	var startCmd = &cobra.Command{
-		Use:   "startUK [name] [image location]",
-		Short: "Start a Unikernel",
-		Long:  `Start a unikernel with a given name and image location`,
-		Run: func(cmd *cobra.Command, args []string) {
-			startUK(client, args)
-		},
-	}
-	startCmd.Flags().StringVar(&ukName, "name", "", "name of the application")
-	startCmd.Flags().StringVar(&imageLocation, "image-location", "", "location of the application image")
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(cmd.StartCommand(serverAddress))
 
 	var stopCommand = &cobra.Command{
 		Use:   "stopUK",
