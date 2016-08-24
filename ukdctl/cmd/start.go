@@ -9,11 +9,21 @@ import (
 )
 
 var (
-	ukName        string // used by startCmd
-	imageLocation string // used by startCmd
+	ukName        string
+	imageLocation string
+	serverAddress string
 )
 
-func startUK(client api.UkdClient, args []string) {
+func startUK(cmd *cobra.Command, args []string) {
+	// TODO: TLS
+	serverAddress := cmd.InheritedFlags().Lookup("server-endpoint").Value.String()
+	conn, err := grpc.Dial(serverAddress, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("fail to dial: %v", err)
+	}
+	defer conn.Close()
+	client := api.NewUkdClient(conn)
+
 	startRequest := &api.StartRequest{
 		Name:     ukName,
 		Location: imageLocation,
@@ -23,25 +33,17 @@ func startUK(client api.UkdClient, args []string) {
 		reply.Success, reply.Ip, reply.Info)
 }
 
-func StartCommand(serverAddress string) *cobra.Command {
-
-	// TODO: TLS
-	conn, err := grpc.Dial(serverAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-	client := api.NewUkdClient(conn)
+func StartCommand() *cobra.Command {
 
 	var startCmd = &cobra.Command{
 		Use:   "startUK [name] [image location]",
 		Short: "Start a Unikernel",
 		Long:  `Start a unikernel with a given name and image location`,
 		Run: func(cmd *cobra.Command, args []string) {
-			startUK(client, args)
+			startUK(cmd, args)
 		},
 	}
 	startCmd.Flags().StringVar(&ukName, "name", "", "name of the application")
 	startCmd.Flags().StringVar(&imageLocation, "image-location", "", "location of the application image")
-        return startCmd
+	return startCmd
 }
