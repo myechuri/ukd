@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 type version_type struct {
@@ -18,6 +19,7 @@ type version_type struct {
 
 type ukdServer struct {
 	Version version_type
+	AppIP  map[string]string
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
@@ -45,7 +47,6 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
 	configRoot += "/qemu-ifup.sh"
 	ioutil.WriteFile(configRoot, qemuIfupByteArray, 0700) // TODO: check error
 	netdevArg := "tap,id=hn0,script=" + configRoot + ",vhost=on"
-	grpclog.Printf(netdevArg)
 
 	cmdName := "qemu-system-x86_64"
 	args := []string{
@@ -75,12 +76,13 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
 		line, _, _ = r.ReadLine()
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
+	ip := strings.Fields(string(line))[1]
+	s.AppIP[request.Name] = ip
 
 	reply := api.StartReply{
-		Success: true,         // TODO: gather err from previous steps
-		Ip:      string(line), // TODO: remove "eth0:"
-		Reason:  "Successful start"}
-	grpclog.Printf("Start request")
+		Success: true, // TODO: gather err from previous steps
+		Ip:      ip,
+		Info:    "Successful start"}
 	return &reply, nil
 }
 
@@ -88,13 +90,14 @@ func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*a
 	grpclog.Printf("StopUK request: name: %s", request.Name)
 	reply := api.StopReply{
 		Success: false,
-		Reason:  "Not yet implemented"}
+		Info:    "Not yet implemented"}
 	grpclog.Printf("Stop request")
 	return &reply, nil
 
 }
 
 func NewServer() *ukdServer {
-	s := &ukdServer{Version: version_type{Major: 0, Minor: 1}}
+	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
+		AppIP: make(map[string]string)}
 	return s
 }
