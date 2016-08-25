@@ -19,7 +19,7 @@ func stopUK(cmd *cobra.Command, args []string) {
 	client := api.NewUkdClient(conn)
 
 	stopRequest := &api.StopRequest{
-		Name: "test app",
+		Name: ukName,
 	}
 	reply, _ := client.StopUK(context.Background(), stopRequest)
 	log.Printf("Application unikernel stopped: %t, Info: %s",
@@ -29,12 +29,13 @@ func stopUK(cmd *cobra.Command, args []string) {
 func StopCommand() *cobra.Command {
 
 	var stopCommand = &cobra.Command{
-		Use:   "stopUK",
+		Use:   "stopUK [name]",
 		Short: "Stop a Unikernel",
 		Long:  `Stop a unikernel with given name`,
 		Run: func(cmd *cobra.Command, args []string) {
 			stopUK(cmd, args)
 		},
 	}
+	stopCommand.Flags().StringVar(&ukName, "name", "", "name of the application")
 	return stopCommand
 }

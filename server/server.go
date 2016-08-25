@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 type version_type struct {
@@ -18,8 +19,8 @@ type version_type struct {
 }
 
 type ukdServer struct {
-	Version version_type
-	AppIP  map[string]string
+	Version    version_type
+	AppProcess map[string]*os.Process
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
@@ -77,7 +78,7 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-	s.AppIP[request.Name] = ip
+	s.AppProcess[request.Name] = cmd.Process
 
 	reply := api.StartReply{
 		Success: true, // TODO: gather err from previous steps
@@ -88,9 +89,21 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
 
 func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
 	grpclog.Printf("StopUK request: name: %s", request.Name)
+	var success bool
+	var info string
+	process := s.AppProcess[request.Name]
+	if process == nil {
+		success = true
+		info = "App not found. Nothing to do."
+	} else {
+		process.Signal(syscall.SIGTERM)
+		process.Wait()
+		success = true
+		info = "Successfully stopped Application"
+	}
 	reply := api.StopReply{
-		Success: false,
-		Info:    "Not yet implemented"}
+		Success: success,
+		Info:    info}
 	grpclog.Printf("Stop request")
 	return &reply, nil
 
@@ -98,6 +111,6 @@ func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*a
 
 func NewServer() *ukdServer {
 	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
-		AppIP: make(map[string]string)}
+		AppProcess: make(map[string]*os.Process)}
 	return s
 }
