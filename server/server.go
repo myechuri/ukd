@@ -96,10 +96,16 @@ func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*a
 		success = true
 		info = "App not found. Nothing to do."
 	} else {
-		process.Signal(syscall.SIGTERM)
-		process.Wait()
-		success = true
-		info = "Successfully stopped Application"
+		process.Signal(syscall.SIGTERM) // TODO: check error
+		pstate, _ := process.Wait() // TODO: check err
+                if pstate.Exited() {
+		    success = true
+		    info = "Successfully stopped Application"
+                    delete(s.AppProcess, request.Name)
+                } else {
+                    success = false
+                    info = pstate.String()
+                }
 	}
 	reply := api.StopReply{
 		Success: success,
