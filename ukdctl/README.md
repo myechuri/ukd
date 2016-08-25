@@ -35,4 +35,8 @@ go install
 
 # ukdctl start --name testapp --image-location "/invalid/path/usr.img"
 2016/08/25 14:08:35 Application unikernel started: false, IP: , Info: /invalid/path/usr.img does not exist, error: stat /invalid/path/usr.img: no such file or directory
+
+# ukdctl start --name testapp --image-location "/root/osv/build/last/usr.img" --hypervisor invalid
+2016/08/25 15:26:11 Application unikernel started: false, IP: , Info: Requested hypervisor (invalid) is not yet supported.
+
 ```

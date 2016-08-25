@@ -24,7 +24,8 @@ message VersionReply {
 // Request message containing image name and image location.
 message StartRequest {
   string name = 1;
-  string location = 2; // location of .img
+  string visor = 2; // hypervisor of choice (default: KVM+QEMU)
+  string location = 3; // location of .img
 }
 
 // Response message signalling result of start attempt.

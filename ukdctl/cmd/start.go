@@ -12,6 +12,7 @@ var (
 	ukName        string
 	imageLocation string
 	serverAddress string
+	visor         string
 )
 
 func start(cmd *cobra.Command, args []string) {
@@ -26,6 +27,7 @@ func start(cmd *cobra.Command, args []string) {
 
 	startRequest := &api.StartRequest{
 		Name:     ukName,
+		Visor:    visor,
 		Location: imageLocation,
 	}
 	reply, _ := client.Start(context.Background(), startRequest)
@@ -36,14 +38,15 @@ func start(cmd *cobra.Command, args []string) {
 func StartCommand() *cobra.Command {
 
 	var startCmd = &cobra.Command{
-		Use:   "start [name] [image location]",
+		Use:   "start",
 		Short: "Start a Unikernel",
-		Long:  `Start a unikernel with a given name and image location`,
+		Long:  `Start a unikernel with a given name and image location, using given hypervisor (default: kvm-qemu)`,
 		Run: func(cmd *cobra.Command, args []string) {
 			start(cmd, args)
 		},
 	}
 	startCmd.Flags().StringVar(&ukName, "name", "", "name of the application")
 	startCmd.Flags().StringVar(&imageLocation, "image-location", "", "location of the application image")
+	startCmd.Flags().StringVar(&visor, "hypervisor", "kvm-qemu", "hypervisor to use")
 	return startCmd
 }
