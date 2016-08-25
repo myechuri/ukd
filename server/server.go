@@ -31,34 +31,13 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 	return &reply, nil
 }
 
-func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
-	grpclog.Printf("Start request: name: %s, Image: %s", request.Name, request.Location)
-
-        // Validate image exists.
-        if _, err := os.Stat(request.Location); os.IsNotExist(err) {
-	    reply := api.StartReply{
-		Success: false,
-		Ip:      "",
-		Info:    request.Location + " does not exist, error: " + err.Error()}
-	    return &reply, nil
-        }
-
-        // Validate application name does not exist.
-	process := s.AppProcess[request.Name]
-	if process != nil {
-	    reply := api.StartReply{
-		Success: false,
-		Ip:      "",
-		Info:    request.Name + " is already running. Please choose a different name for the application if you wish to start a second instance using the same image."}
-	    return &reply, nil
-	}
-
-	driveArg := "file=" + request.Location + ",if=none,id=hd0,cache=none,aio=native"
+func StartQemu(s ukdServer, name string, location string) (*api.StartReply, error) {
+	driveArg := "file=" + location + ",if=none,id=hd0,cache=none,aio=native"
 
 	// Compose application-specific configuration.
 	configRoot := "/var/lib/ukd"
 	os.Mkdir(configRoot, 0777) // TODO: check error
-	configRoot += "/" + request.Name
+	configRoot += "/" + name
 	os.Mkdir(configRoot, 0777) // TODO: check error
 	qemuIfupByteArray := []byte("#!/bin/sh\n" +
 		"brctl stp virbr0 off\n" +
@@ -97,13 +76,47 @@ func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*a
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-	s.AppProcess[request.Name] = cmd.Process
+	s.AppProcess[name] = cmd.Process
 
 	reply := api.StartReply{
 		Success: true, // TODO: gather err from previous steps
 		Ip:      ip,
 		Info:    "Successful start"}
 	return &reply, nil
+}
+
+func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
+	grpclog.Printf("Start request: name: %s, Image: %s", request.Name, request.Location)
+
+	// Validate image exists.
+	if _, err := os.Stat(request.Location); os.IsNotExist(err) {
+		reply := api.StartReply{
+			Success: false,
+			Ip:      "",
+			Info:    "Image " + request.Location + " does not exist, error: " + err.Error()}
+		return &reply, nil
+	}
+
+	// Validate application name does not exist.
+	process := s.AppProcess[request.Name]
+	if process != nil {
+		reply := api.StartReply{
+			Success: false,
+			Ip:      "",
+			Info:    request.Name + " is already running. Please choose a different name for the application if you wish to start a second instance using the same image."}
+		return &reply, nil
+	}
+
+	if request.Visor == "kvm-qemu" {
+		reply, _ := StartQemu(s, request.Name, request.Location)
+		return reply, nil
+	} else {
+		reply := api.StartReply{
+			Success: false,
+			Ip:      "",
+			Info:    "Requested hypervisor (" + request.Visor + ") is not yet supported."}
+		return &reply, nil
+	}
 }
 
 func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
@@ -116,15 +129,15 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 		info = "App not found. Nothing to do."
 	} else {
 		process.Signal(syscall.SIGTERM) // TODO: check error
-		pstate, _ := process.Wait() // TODO: check err
-                if pstate.Exited() {
-		    success = true
-		    info = "Successfully stopped Application"
-                    delete(s.AppProcess, request.Name)
-                } else {
-                    success = false
-                    info = pstate.String()
-                }
+		pstate, _ := process.Wait()     // TODO: check err
+		if pstate.Exited() {
+			success = true
+			info = "Successfully stopped Application (" + request.Name + ")"
+			delete(s.AppProcess, request.Name)
+		} else {
+			success = false
+			info = pstate.String()
+		}
 	}
 	reply := api.StopReply{
 		Success: success,

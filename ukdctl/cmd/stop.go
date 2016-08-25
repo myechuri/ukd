@@ -29,7 +29,7 @@ func stop(cmd *cobra.Command, args []string) {
 func StopCommand() *cobra.Command {
 
 	var stopCommand = &cobra.Command{
-		Use:   "stop [name]",
+		Use:   "stop",
 		Short: "Stop a Unikernel",
 		Long:  `Stop a unikernel with given name`,
 		Run: func(cmd *cobra.Command, args []string) {
