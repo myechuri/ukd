@@ -34,6 +34,25 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
 	grpclog.Printf("Start request: name: %s, Image: %s", request.Name, request.Location)
 
+        // Validate image exists.
+        if _, err := os.Stat(request.Location); os.IsNotExist(err) {
+	    reply := api.StartReply{
+		Success: false,
+		Ip:      "",
+		Info:    request.Location + " does not exist, error: " + err.Error()}
+	    return &reply, nil
+        }
+
+        // Validate application name does not exist.
+	process := s.AppProcess[request.Name]
+	if process != nil {
+	    reply := api.StartReply{
+		Success: false,
+		Ip:      "",
+		Info:    request.Name + " is already running. Please choose a different name for the application if you wish to start a second instance using the same image."}
+	    return &reply, nil
+	}
+
 	driveArg := "file=" + request.Location + ",if=none,id=hd0,cache=none,aio=native"
 
 	// Compose application-specific configuration.
