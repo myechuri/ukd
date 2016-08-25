@@ -6,10 +6,10 @@ service Ukd {
   rpc GetVersion (VersionRequest) returns (VersionReply) {}
 
   // Start a Unikernel.
-  rpc StartUK (StartRequest) returns (StartReply) {}
+  rpc Start (StartRequest) returns (StartReply) {}
 
   // Stop a Unikernel.
-  rpc StopUK (StopRequest) returns (StopReply) {}
+  rpc Stop (StopRequest) returns (StopReply) {}
 }
 
 message VersionRequest {
