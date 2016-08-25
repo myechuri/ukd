@@ -31,8 +31,8 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 	return &reply, nil
 }
 
-func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
-	grpclog.Printf("StartUK request: name: %s, Image: %s", request.Name, request.Location)
+func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
+	grpclog.Printf("Start request: name: %s, Image: %s", request.Name, request.Location)
 
 	driveArg := "file=" + request.Location + ",if=none,id=hd0,cache=none,aio=native"
 
@@ -87,8 +87,8 @@ func (s ukdServer) StartUK(context context.Context, request *api.StartRequest) (
 	return &reply, nil
 }
 
-func (s ukdServer) StopUK(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
-	grpclog.Printf("StopUK request: name: %s", request.Name)
+func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
+	grpclog.Printf("Stop request: name: %s", request.Name)
 	var success bool
 	var info string
 	process := s.AppProcess[request.Name]

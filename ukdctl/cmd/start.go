@@ -14,7 +14,7 @@ var (
 	serverAddress string
 )
 
-func startUK(cmd *cobra.Command, args []string) {
+func start(cmd *cobra.Command, args []string) {
 	// TODO: TLS
 	serverAddress := cmd.InheritedFlags().Lookup("server-endpoint").Value.String()
 	conn, err := grpc.Dial(serverAddress, grpc.WithInsecure())
@@ -28,7 +28,7 @@ func startUK(cmd *cobra.Command, args []string) {
 		Name:     ukName,
 		Location: imageLocation,
 	}
-	reply, _ := client.StartUK(context.Background(), startRequest)
+	reply, _ := client.Start(context.Background(), startRequest)
 	log.Printf("Application unikernel started: %t, IP: %s, Info: %s",
 		reply.Success, reply.Ip, reply.Info)
 }
@@ -36,11 +36,11 @@ func startUK(cmd *cobra.Command, args []string) {
 func StartCommand() *cobra.Command {
 
 	var startCmd = &cobra.Command{
-		Use:   "startUK [name] [image location]",
+		Use:   "start [name] [image location]",
 		Short: "Start a Unikernel",
 		Long:  `Start a unikernel with a given name and image location`,
 		Run: func(cmd *cobra.Command, args []string) {
-			startUK(cmd, args)
+			start(cmd, args)
 		},
 	}
 	startCmd.Flags().StringVar(&ukName, "name", "", "name of the application")

@@ -21,10 +21,12 @@ go install
 # ukdctl --server-endpoint 'localhost:55555' version
 2016/08/12 14:27:13 Ukd server version: 0.1
 
-# ukdctl startUK --name testapp --image-location "/root/osv/build/last/usr.img"
+# ukdctl start --name testapp --image-location "/root/osv/build/last/usr.img"
 2016/08/25 12:14:28 Application unikernel started: true, IP: 192.168.122.89, Info: Successful start
 
-# ukdctl stopUK --name testapp
+# ukdctl stop --name testapp
 2016/08/25 12:14:41 Application unikernel stopped: true, Info: Successfully stopped Application
-#
+
+# ukdctl stop --name testapp
+2016/08/25 13:58:33 Application unikernel stopped: true, Info: App not found. Nothing to do.
 ```

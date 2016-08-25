@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-func stopUK(cmd *cobra.Command, args []string) {
+func stop(cmd *cobra.Command, args []string) {
 	// TODO: TLS
 	serverAddress := cmd.InheritedFlags().Lookup("server-endpoint").Value.String()
 	conn, err := grpc.Dial(serverAddress, grpc.WithInsecure())
@@ -21,7 +21,7 @@ func stopUK(cmd *cobra.Command, args []string) {
 	stopRequest := &api.StopRequest{
 		Name: ukName,
 	}
-	reply, _ := client.StopUK(context.Background(), stopRequest)
+	reply, _ := client.Stop(context.Background(), stopRequest)
 	log.Printf("Application unikernel stopped: %t, Info: %s",
 		reply.Success, reply.Info)
 }
@@ -29,11 +29,11 @@ func stopUK(cmd *cobra.Command, args []string) {
 func StopCommand() *cobra.Command {
 
 	var stopCommand = &cobra.Command{
-		Use:   "stopUK [name]",
+		Use:   "stop [name]",
 		Short: "Stop a Unikernel",
 		Long:  `Stop a unikernel with given name`,
 		Run: func(cmd *cobra.Command, args []string) {
-			stopUK(cmd, args)
+			stop(cmd, args)
 		},
 	}
 	stopCommand.Flags().StringVar(&ukName, "name", "", "name of the application")
