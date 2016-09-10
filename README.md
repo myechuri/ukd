@@ -8,10 +8,19 @@ Unikernel runtime server on a compute node.
 
 Get the release binaries, and start ukd:
 ```
-curl -L https://github.com/myechuri/ukd/releases/download/v0.01/ukd-v0.01-linux-amd64.tar.gz
-tar xvzf ukd-v0.01-linux-amd64.tar.gz
-mkdir -p /var/lib/ukd/images
-./ukd &
+curl -L https://github.com/myechuri/ukd/releases/download/v0.1/ukd-v0.1-linux-amd64.tar.gz
+tar xvzf ukd-v0.1-linux-amd64.tar.gz
+source install.sh
+```
+
+Start ``ukd`` server:
+```
+ukd &
+```
+
+Use ``ukdctl`` client:
+```
+ukdctl --help
 ```
 
 ## Build 
