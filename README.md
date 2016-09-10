@@ -18,9 +18,13 @@ Start ``ukd`` server:
 ukd &
 ```
 
-Use ``ukdctl`` client:
+Use ``ukdctl`` client to start/stop sample application:
 ```
-ukdctl --help
+root@ubuntu# ukdctl --help
+root@ubuntu# ukdctl start --image-location="/var/lib/ukd/images/nativeexample.img" --name testuk
+2016/09/09 17:21:17 Application unikernel started: true, IP: 192.168.122.89, Info: Successful start
+root@ubuntu# ukdctl stop --name testuk
+2016/09/09 17:21:22 Application unikernel stopped: true, Info: Successfully stopped Application (testuk)
 ```
 
 ## Build 
