@@ -2,7 +2,7 @@
 
 Unikernel runtime server on a compute node.
 
-## Install pre-built binaries
+## Install pre-built binaries (recommended)
 
 #### Linux
 
@@ -27,7 +27,7 @@ root@ubuntu# ukdctl stop --name testuk
 2016/09/09 17:21:22 Application unikernel stopped: true, Info: Successfully stopped Application (testuk)
 ```
 
-## Build 
+## Build from source
 
 ### Get Dependencies
 ```
@@ -36,20 +36,18 @@ go get github.com/spf13/cobra
 go get github.com/urfave/cli
 ```
 
-### Start ``ukd`` server
+### Build and install ``ukd`` server
 
 ```
 cd ukd
 go install
-ukd --help
 ```
 
-### Start ``ukdctl`` client
+### Build and install ``ukdctl`` client
 
 ```
 cd ukdctl
 go install
-ukdctl --help
 ```
 
 ## Disclaimer
