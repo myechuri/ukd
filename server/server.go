@@ -65,6 +65,13 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		"-mon", "chardev=stdio,mode=readline,default",
 		"-device", "isa-serial,chardev=stdio"}
 	cmd := exec.Command(cmdName, args...)
+
+        // Disable Glibc's per-thread arena to limit qemu virtual memory.
+        // [ References:
+        // 1. https://siddhesh.in/posts/malloc-per-thread-arenas-in-glibc.html
+        // 2. https://devcenter.heroku.com/articles/tuning-glibc-memory-behavior ]
+        cmd.Env = []string{"MALLOC_ARENA_MAX=1"}
+
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
 
