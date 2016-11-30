@@ -10,6 +10,9 @@ service Ukd {
 
   // Stop a Unikernel.
   rpc Stop (StopRequest) returns (StopReply) {}
+
+  // Update a Unikernel on-disk image.
+  rpc UpdateImage (UpdateImageRequest) returns (UpdateImageReply) {}
 }
 
 message VersionRequest {
@@ -42,6 +45,16 @@ message StopRequest {
 
 // Response message signalling result of stop attempt.
 message StopReply {
+  bool success = 1;
+  string info = 2; // Additional information.
+}
+
+message UpdateImageRequest {
+  string base = 1; // Base image.
+  bytes diff = 2; // Diff of base image and new image.
+}
+
+message UpdateImageReply {
   bool success = 1;
   string info = 2; // Additional information.
 }

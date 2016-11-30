@@ -18,9 +18,15 @@ type version_type struct {
 	Minor int32
 }
 
+type RuntimeInfo struct {
+        Process *os.Process
+        Image string
+}
+
 type ukdServer struct {
 	Version    version_type
-	AppProcess map[string]*os.Process
+        AppRuntime map[string]*RuntimeInfo
+	// AppProcess map[string]*os.Process
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
@@ -76,7 +82,9 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-	s.AppProcess[name] = cmd.Process
+        runtime := &RuntimeInfo{Process: cmd.Process,
+                                Image: location}
+	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
 		Success: true, // TODO: gather err from previous steps
@@ -98,8 +106,7 @@ func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*a
 	}
 
 	// Validate application name does not exist.
-	process := s.AppProcess[request.Name]
-	if process != nil {
+	if s.AppRuntime[request.Name] != nil {
 		reply := api.StartReply{
 			Success: false,
 			Ip:      "",
@@ -123,17 +130,17 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 	grpclog.Printf("Stop request: name: %s", request.Name)
 	var success bool
 	var info string
-	process := s.AppProcess[request.Name]
-	if process == nil {
+	runtime := s.AppRuntime[request.Name]
+	if runtime == nil {
 		success = true
 		info = "App not found. Nothing to do."
 	} else {
-		process.Signal(syscall.SIGTERM) // TODO: check error
-		pstate, _ := process.Wait()     // TODO: check err
+		runtime.Process.Signal(syscall.SIGTERM) // TODO: check error
+		pstate, _ := runtime.Process.Wait()     // TODO: check err
 		if pstate.Exited() {
 			success = true
 			info = "Successfully stopped Application (" + request.Name + ")"
-			delete(s.AppProcess, request.Name)
+			delete(s.AppRuntime, request.Name)
 		} else {
 			success = false
 			info = pstate.String()
@@ -147,8 +154,33 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 
 }
 
+func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImageRequest) (*api.UpdateImageReply, error) {
+	grpclog.Printf("Update request: base=%s", request.Base)
+	var success bool
+	var info string
+
+        // TODO: check that image is not currently in use.
+
+	info = "WIP: Image update(" + request.Base + ")"
+	success = false
+
+	reply := api.UpdateImageReply{
+		Success: success,
+		Info:    info}
+	grpclog.Printf("Update image request")
+	return &reply, nil
+}
+
 func NewServer() *ukdServer {
 	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
-		AppProcess: make(map[string]*os.Process)}
+		AppRuntime: make(map[string]*RuntimeInfo)}
+
+        // Image home.
+        imagePath := "/var/lib/ukd/images"
+        err := os.MkdirAll("/var/lib/ukd/images", 0700)
+	if err != nil {
+            grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
+	}
+
 	return s
 }
