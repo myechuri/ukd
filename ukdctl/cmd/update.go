@@ -6,11 +6,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
+        "io/ioutil"
 )
 
 var (
 	baseImagePath string
-	newImagePath  string
+	deltaFilePath string
 )
 
 func updateImage(cmd *cobra.Command, args []string) {
@@ -23,7 +24,10 @@ func updateImage(cmd *cobra.Command, args []string) {
 	defer conn.Close()
 	client := api.NewUkdClient(conn)
 
-        var diff []byte
+        diff, err := ioutil.ReadFile(deltaFilePath)
+	if err != nil {
+   	    log.Fatalf("ReadFile: %s, error: %v", deltaFilePath, err)
+    	}
 
 	updateImageRequest := &api.UpdateImageRequest{
 		Base:     baseImagePath,
@@ -44,7 +48,7 @@ func UpdateImageCommand() *cobra.Command {
 			updateImage(cmd, args)
 		},
 	}
-	updateImageCmd.Flags().StringVar(&baseImagePath, "baseImage", "", "fully qualified path of base image")
-	updateImageCmd.Flags().StringVar(&newImagePath, "newImage", "", "fully qualified path of new image")
+	updateImageCmd.Flags().StringVar(&baseImagePath, "baseImage", "", "fully qualified path of base image on destination")
+	updateImageCmd.Flags().StringVar(&deltaFilePath, "deltaFile", "", "fully qualified path of delta of new image over baseImage")
 	return updateImageCmd
 }

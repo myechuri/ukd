@@ -154,15 +154,46 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 
 }
 
+func ApplyDiff(base string, diff []byte) (bool, string) {
+      var success bool
+      var info string
+
+      workDir, _ := ioutil.TempDir("", "ukd-update-")
+      deltaFile := workDir + "/deltaFile"
+      f, err := os.Create(deltaFile)
+      if err != nil {
+         grpclog.Printf("Failed to create temp file")
+         success = false
+         info = "Failed to create delta file " + deltaFile + ", error: " + err.Error()
+         return success,info
+      }
+      err = ioutil.WriteFile(deltaFile, diff, 0700)
+      f.Close()
+
+      updatedImagePath := workDir + "/newImage.img"
+      cmdName := "rdiff"
+      args := []string{"patch", base, deltaFile, updatedImagePath}
+      cmd := exec.Command(cmdName, args...)
+      err = cmd.Run()
+      if err != nil {
+         success = false
+         info = "Failed to patch (" + base + " with " + deltaFile + ", error: " + err.Error()
+      } else {
+         success = true
+         info = "Successfully patched image at " + updatedImagePath
+      }
+
+      // defer os.RemoveAll(workDir)
+      return success,info
+}
+
 func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImageRequest) (*api.UpdateImageReply, error) {
 	grpclog.Printf("Update request: base=%s", request.Base)
 	var success bool
 	var info string
 
         // TODO: check that image is not currently in use.
-
-	info = "WIP: Image update(" + request.Base + ")"
-	success = false
+        success, info = ApplyDiff(request.Base, request.Diff)
 
 	reply := api.UpdateImageReply{
 		Success: success,
