@@ -5,14 +5,16 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"io/ioutil"
 	"log"
-        "io/ioutil"
+	"os"
+	"os/exec"
 )
 
 var (
-	baseImagePath     string
-        baseSignaturePath string
-	deltaFilePath     string
+	oldImagePath      string
+	baseSignaturePath string
+	newImagePath      string
 )
 
 func updateImage(cmd *cobra.Command, args []string) {
@@ -25,25 +27,53 @@ func updateImage(cmd *cobra.Command, args []string) {
 	defer conn.Close()
 	client := api.NewUkdClient(conn)
 
-        diff, err := ioutil.ReadFile(deltaFilePath)
-	if err != nil {
-   	    log.Fatalf("ReadFile: %s, error: %v", deltaFilePath, err)
-    	}
+	// Step 1: Get signature of the current image on server.
+	workDir, _ := ioutil.TempDir("", "ukdctl-update-image-")
+	var signature []byte
+	imageSignatureRequest := &api.ImageSignatureRequest{
+		Path: oldImagePath,
+	}
+	reply, _ := client.GetImageSignature(context.Background(),
+		imageSignatureRequest)
+	if !reply.Success {
+		log.Printf("Failed to get signature for image %s, Info: %s",
+			oldImagePath, reply.Info)
+		return
+	}
+	log.Printf("Gathered signature of old image on ukd server")
+	signature = reply.Signature
+	signatureFile := workDir + "/signatureFile"
+	f, err := os.Create(signatureFile)
+	err = ioutil.WriteFile(signatureFile, signature, 0777)
+	f.Close()
 
-        var signature []byte
-        signature, err = ioutil.ReadFile(baseSignaturePath)
+	// Step 2: Compute diff of new image using source signature.
+	deltaFilePath := workDir + "/deltaFile"
+	cmdName := "rdiff"
+	args = []string{"delta", signatureFile, newImagePath, deltaFilePath}
+	deltaCmd := exec.Command(cmdName, args...)
+	err = deltaCmd.Run()
 	if err != nil {
-   	    log.Fatalf("ReadFile: %s, error: %v", baseSignaturePath, err)
-    	}
+		info := "Failed to compute delta for " + newImagePath + " over " + oldImagePath + ", error: " + err.Error()
+		log.Printf("Failed to update image. Info: %s", info)
+		return
+	}
+
+	diff, err := ioutil.ReadFile(deltaFilePath)
+	log.Printf("Calcuated diff of new image over old image: %dKB", len(diff)/1024)
+	if err != nil {
+		log.Fatalf("ReadFile: %s, error: %v", deltaFilePath, err)
+	}
 
 	updateImageRequest := &api.UpdateImageRequest{
-		Base:     baseImagePath,
-                Basesig:  signature,
-		Diff:     diff,
+		Base:    oldImagePath,
+		Basesig: signature,
+		Diff:    diff,
 	}
-	reply, _ := client.UpdateImage(context.Background(), updateImageRequest)
+	log.Printf("Transmitting diff over..")
+	updateReply, _ := client.UpdateImage(context.Background(), updateImageRequest)
 	log.Printf("Unikernel image update: %t, Info: %s",
-		reply.Success, reply.Info)
+		updateReply.Success, updateReply.Info)
 }
 
 func UpdateImageCommand() *cobra.Command {
@@ -56,8 +86,9 @@ func UpdateImageCommand() *cobra.Command {
 			updateImage(cmd, args)
 		},
 	}
-	updateImageCmd.Flags().StringVar(&baseImagePath, "baseImage", "", "fully qualified path of base image on destination")
-	updateImageCmd.Flags().StringVar(&baseSignaturePath, "baseImageSignature", "", "fully qualified path of signature of base image that was used to compute diff")
-	updateImageCmd.Flags().StringVar(&deltaFilePath, "deltaFile", "", "fully qualified path of delta of new image over baseImage")
+	updateImageCmd.Flags().StringVar(&oldImagePath, "oldImage", "", "fully qualified path of the old image on ukd server compute node")
+	updateImageCmd.Flags().StringVar(&newImagePath, "newImage", "", "fully qualified path of the new image on the compute node where ukdctl is run")
+	// updateImageCmd.Flags().StringVar(&baseSignaturePath, "baseImageSignature", "", "fully qualified path of signature of base image that was used to compute diff")
+	// updateImageCmd.Flags().StringVar(&deltaFilePath, "deltaFile", "", "fully qualified path of delta of new image over baseImage")
 	return updateImageCmd
 }

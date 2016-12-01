@@ -2,7 +2,7 @@ package server
 
 import (
 	"bufio"
-        "bytes"
+	"bytes"
 	"github.com/myechuri/ukd/server/api"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
@@ -20,13 +20,13 @@ type version_type struct {
 }
 
 type RuntimeInfo struct {
-        Process *os.Process
-        Image string
+	Process *os.Process
+	Image   string
 }
 
 type ukdServer struct {
 	Version    version_type
-        AppRuntime map[string]*RuntimeInfo
+	AppRuntime map[string]*RuntimeInfo
 	// AppProcess map[string]*os.Process
 }
 
@@ -83,8 +83,8 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-        runtime := &RuntimeInfo{Process: cmd.Process,
-                                Image: location}
+	runtime := &RuntimeInfo{Process: cmd.Process,
+		Image: location}
 	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
@@ -155,52 +155,103 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 
 }
 
+func ComputeSignature(path string) (bool, []byte, string) {
+	var success bool
+	var info string
+	var signature []byte
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		success = false
+		info = "File not found: " + path
+		return success, nil, info
+	}
+
+	workDir, _ := ioutil.TempDir("", "ukd-compute-signature-")
+
+	// Validate base image signature sent by client matches
+	// server base image signature.
+	serverImageSignature := workDir + "/serverSignature"
+	cmdName := "rdiff"
+	args := []string{"signature", path, serverImageSignature}
+	cmd := exec.Command(cmdName, args...)
+	err := cmd.Run()
+	if err != nil {
+		success = false
+		info = "Failed to compute signature for " + path + ", error: " + err.Error()
+		return success, nil, info
+	}
+	signature, err = ioutil.ReadFile(serverImageSignature)
+	success = true
+	info = "Successfully computed server signature"
+
+	// TODO: delete workDir
+	return success, signature, info
+
+}
+
+func (s ukdServer) GetImageSignature(context context.Context, request *api.ImageSignatureRequest) (*api.ImageSignatureReply, error) {
+	grpclog.Printf("Signature request: image=%s", request.Path)
+	var success bool
+	var info string
+	var signature []byte
+
+	// TODO: check that image is not currently in use.
+	success, signature, info = ComputeSignature(request.Path)
+
+	reply := api.ImageSignatureReply{
+		Success:   success,
+		Signature: signature,
+		Info:      info}
+	grpclog.Printf("GetImageSignature request")
+	return &reply, nil
+}
+
 func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
-      var success bool
-      var info string
+	var success bool
+	var info string
 
-      workDir, _ := ioutil.TempDir("", "ukd-update-")
+	workDir, _ := ioutil.TempDir("", "ukd-update-")
 
-      // Validate base image signature sent by client matches
-      // server base image signature.
-      serverImageSignature := workDir + "/serverSignature"
-      cmdName := "rdiff"
-      args := []string{"signature", base, serverImageSignature}
-      cmd := exec.Command(cmdName, args...)
-      err := cmd.Run()
-      serverSignature, err := ioutil.ReadFile(serverImageSignature)
-      if !bytes.Equal(serverSignature, basesig) {
-         success = false
-         info = "Diff was generated for a different base image than " + base
-         return success, info
-      }
+	// Validate base image signature sent by client matches
+	// server base image signature.
+	serverImageSignature := workDir + "/serverSignature"
+	cmdName := "rdiff"
+	args := []string{"signature", base, serverImageSignature}
+	cmd := exec.Command(cmdName, args...)
+	err := cmd.Run()
+	serverSignature, err := ioutil.ReadFile(serverImageSignature)
+	if !bytes.Equal(serverSignature, basesig) {
+		success = false
+		info = "Diff was generated for a different base image than " + base
+		return success, info
+	}
 
-      deltaFile := workDir + "/deltaFile"
-      f, err := os.Create(deltaFile)
-      if err != nil {
-         grpclog.Printf("Failed to create temp file")
-         success = false
-         info = "Failed to create delta file " + deltaFile + ", error: " + err.Error()
-         return success,info
-      }
-      err = ioutil.WriteFile(deltaFile, diff, 0700)
-      f.Close()
+	deltaFile := workDir + "/deltaFile"
+	f, err := os.Create(deltaFile)
+	if err != nil {
+		grpclog.Printf("Failed to create temp file")
+		success = false
+		info = "Failed to create delta file " + deltaFile + ", error: " + err.Error()
+		return success, info
+	}
+	err = ioutil.WriteFile(deltaFile, diff, 0700)
+	f.Close()
 
-      updatedImagePath := workDir + "/newImage.img"
-      cmdName = "rdiff"
-      args = []string{"patch", base, deltaFile, updatedImagePath}
-      cmd = exec.Command(cmdName, args...)
-      err = cmd.Run()
-      if err != nil {
-         success = false
-         info = "Failed to patch (" + base + " with " + deltaFile + ", error: " + err.Error()
-      } else {
-         success = true
-         info = "Successfully patched image at " + updatedImagePath
-      }
+	updatedImagePath := workDir + "/newImage.img"
+	cmdName = "rdiff"
+	args = []string{"patch", base, deltaFile, updatedImagePath}
+	cmd = exec.Command(cmdName, args...)
+	err = cmd.Run()
+	if err != nil {
+		success = false
+		info = "Failed to patch (" + base + " with " + deltaFile + ", error: " + err.Error()
+	} else {
+		success = true
+		info = "Successfully patched image at " + updatedImagePath
+	}
 
-      // defer os.RemoveAll(workDir)
-      return success,info
+	// defer os.RemoveAll(workDir)
+	return success, info
 }
 
 func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImageRequest) (*api.UpdateImageReply, error) {
@@ -208,8 +259,8 @@ func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImage
 	var success bool
 	var info string
 
-        // TODO: check that image is not currently in use.
-        success, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
+	// TODO: check that image is not currently in use.
+	success, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
 
 	reply := api.UpdateImageReply{
 		Success: success,
@@ -222,11 +273,11 @@ func NewServer() *ukdServer {
 	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
 		AppRuntime: make(map[string]*RuntimeInfo)}
 
-        // Image home.
-        imagePath := "/var/lib/ukd/images"
-        err := os.MkdirAll("/var/lib/ukd/images", 0700)
+	// Image home.
+	imagePath := "/var/lib/ukd/images"
+	err := os.MkdirAll("/var/lib/ukd/images", 0700)
 	if err != nil {
-            grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
+		grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
 	}
 
 	return s

@@ -11,6 +11,9 @@ service Ukd {
   // Stop a Unikernel.
   rpc Stop (StopRequest) returns (StopReply) {}
 
+  // Get image signature.
+  rpc GetImageSignature (ImageSignatureRequest) returns (ImageSignatureReply) {}
+
   // Update a Unikernel on-disk image.
   rpc UpdateImage (UpdateImageRequest) returns (UpdateImageReply) {}
 }
@@ -47,6 +50,16 @@ message StopRequest {
 message StopReply {
   bool success = 1;
   string info = 2; // Additional information.
+}
+
+message ImageSignatureRequest {
+  string path = 1; // Fully qualified path of the image.
+}
+
+message ImageSignatureReply {
+  bool success = 1;
+  bytes signature = 2; // Signature of the image.
+  string info = 3; // Additional info.
 }
 
 message UpdateImageRequest {
