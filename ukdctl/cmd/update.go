@@ -29,6 +29,7 @@ func updateImage(cmd *cobra.Command, args []string) {
 
 	// Step 1: Get signature of the current image on server.
 	workDir, _ := ioutil.TempDir("", "ukdctl-update-image-")
+	defer os.RemoveAll(workDir)
 	var signature []byte
 	imageSignatureRequest := &api.ImageSignatureRequest{
 		Path: oldImagePath,

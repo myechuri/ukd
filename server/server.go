@@ -167,6 +167,7 @@ func ComputeSignature(path string) (bool, []byte, string) {
 	}
 
 	workDir, _ := ioutil.TempDir("", "ukd-compute-signature-")
+	defer os.RemoveAll(workDir)
 
 	// Validate base image signature sent by client matches
 	// server base image signature.
@@ -210,7 +211,7 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 	var success bool
 	var info string
 
-	workDir, _ := ioutil.TempDir("", "ukd-update-")
+	workDir, _ := ioutil.TempDir("", "ukd-update-stage-")
 
 	// Validate base image signature sent by client matches
 	// server base image signature.
@@ -220,12 +221,14 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 	cmd := exec.Command(cmdName, args...)
 	err := cmd.Run()
 	serverSignature, err := ioutil.ReadFile(serverImageSignature)
+	defer os.RemoveAll(serverImageSignature)
 	if !bytes.Equal(serverSignature, basesig) {
 		success = false
 		info = "Diff was generated for a different base image than " + base
 		return success, info
 	}
 
+	// Write out diff to delta file.
 	deltaFile := workDir + "/deltaFile"
 	f, err := os.Create(deltaFile)
 	if err != nil {
@@ -236,6 +239,7 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 	}
 	err = ioutil.WriteFile(deltaFile, diff, 0700)
 	f.Close()
+	defer os.RemoveAll(deltaFile)
 
 	updatedImagePath := workDir + "/newImage.img"
 	cmdName = "rdiff"
@@ -247,10 +251,9 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 		info = "Failed to patch (" + base + " with " + deltaFile + ", error: " + err.Error()
 	} else {
 		success = true
-		info = "Successfully patched image at " + updatedImagePath
+		info = "Successfully staged patched image at " + updatedImagePath + ". Please validate the image before replacing master copy."
 	}
 
-	// defer os.RemoveAll(workDir)
 	return success, info
 }
 
