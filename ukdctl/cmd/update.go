@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	baseImagePath string
-	deltaFilePath string
+	baseImagePath     string
+        baseSignaturePath string
+	deltaFilePath     string
 )
 
 func updateImage(cmd *cobra.Command, args []string) {
@@ -29,8 +30,15 @@ func updateImage(cmd *cobra.Command, args []string) {
    	    log.Fatalf("ReadFile: %s, error: %v", deltaFilePath, err)
     	}
 
+        var signature []byte
+        signature, err = ioutil.ReadFile(baseSignaturePath)
+	if err != nil {
+   	    log.Fatalf("ReadFile: %s, error: %v", baseSignaturePath, err)
+    	}
+
 	updateImageRequest := &api.UpdateImageRequest{
 		Base:     baseImagePath,
+                Basesig:  signature,
 		Diff:     diff,
 	}
 	reply, _ := client.UpdateImage(context.Background(), updateImageRequest)
@@ -49,6 +57,7 @@ func UpdateImageCommand() *cobra.Command {
 		},
 	}
 	updateImageCmd.Flags().StringVar(&baseImagePath, "baseImage", "", "fully qualified path of base image on destination")
+	updateImageCmd.Flags().StringVar(&baseSignaturePath, "baseImageSignature", "", "fully qualified path of signature of base image that was used to compute diff")
 	updateImageCmd.Flags().StringVar(&deltaFilePath, "deltaFile", "", "fully qualified path of delta of new image over baseImage")
 	return updateImageCmd
 }

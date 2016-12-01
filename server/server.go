@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+        "bytes"
 	"github.com/myechuri/ukd/server/api"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
@@ -154,11 +155,26 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 
 }
 
-func ApplyDiff(base string, diff []byte) (bool, string) {
+func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
       var success bool
       var info string
 
       workDir, _ := ioutil.TempDir("", "ukd-update-")
+
+      // Validate base image signature sent by client matches
+      // server base image signature.
+      serverImageSignature := workDir + "/serverSignature"
+      cmdName := "rdiff"
+      args := []string{"signature", base, serverImageSignature}
+      cmd := exec.Command(cmdName, args...)
+      err := cmd.Run()
+      serverSignature, err := ioutil.ReadFile(serverImageSignature)
+      if !bytes.Equal(serverSignature, basesig) {
+         success = false
+         info = "Diff was generated for a different base image than " + base
+         return success, info
+      }
+
       deltaFile := workDir + "/deltaFile"
       f, err := os.Create(deltaFile)
       if err != nil {
@@ -171,9 +187,9 @@ func ApplyDiff(base string, diff []byte) (bool, string) {
       f.Close()
 
       updatedImagePath := workDir + "/newImage.img"
-      cmdName := "rdiff"
-      args := []string{"patch", base, deltaFile, updatedImagePath}
-      cmd := exec.Command(cmdName, args...)
+      cmdName = "rdiff"
+      args = []string{"patch", base, deltaFile, updatedImagePath}
+      cmd = exec.Command(cmdName, args...)
       err = cmd.Run()
       if err != nil {
          success = false
@@ -193,7 +209,7 @@ func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImage
 	var info string
 
         // TODO: check that image is not currently in use.
-        success, info = ApplyDiff(request.Base, request.Diff)
+        success, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
 
 	reply := api.UpdateImageReply{
 		Success: success,
