@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"github.com/myechuri/ukd/server/api"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
@@ -18,9 +19,15 @@ type version_type struct {
 	Minor int32
 }
 
+type RuntimeInfo struct {
+	Process *os.Process
+	Image   string
+}
+
 type ukdServer struct {
 	Version    version_type
-	AppProcess map[string]*os.Process
+	AppRuntime map[string]*RuntimeInfo
+	// AppProcess map[string]*os.Process
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
@@ -83,7 +90,9 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-	s.AppProcess[name] = cmd.Process
+	runtime := &RuntimeInfo{Process: cmd.Process,
+		Image: location}
+	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
 		Success: true, // TODO: gather err from previous steps
@@ -105,8 +114,7 @@ func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*a
 	}
 
 	// Validate application name does not exist.
-	process := s.AppProcess[request.Name]
-	if process != nil {
+	if s.AppRuntime[request.Name] != nil {
 		reply := api.StartReply{
 			Success: false,
 			Ip:      "",
@@ -130,17 +138,17 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 	grpclog.Printf("Stop request: name: %s", request.Name)
 	var success bool
 	var info string
-	process := s.AppProcess[request.Name]
-	if process == nil {
+	runtime := s.AppRuntime[request.Name]
+	if runtime == nil {
 		success = true
 		info = "App not found. Nothing to do."
 	} else {
-		process.Signal(syscall.SIGTERM) // TODO: check error
-		pstate, _ := process.Wait()     // TODO: check err
+		runtime.Process.Signal(syscall.SIGTERM) // TODO: check error
+		pstate, _ := runtime.Process.Wait()     // TODO: check err
 		if pstate.Exited() {
 			success = true
 			info = "Successfully stopped Application (" + request.Name + ")"
-			delete(s.AppProcess, request.Name)
+			delete(s.AppRuntime, request.Name)
 		} else {
 			success = false
 			info = pstate.String()
@@ -154,8 +162,133 @@ func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api
 
 }
 
+func ComputeSignature(path string) (bool, []byte, string) {
+	var success bool
+	var info string
+	var signature []byte
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		success = false
+		info = "File not found: " + path
+		return success, nil, info
+	}
+
+	workDir, _ := ioutil.TempDir("", "ukd-compute-signature-")
+	defer os.RemoveAll(workDir)
+
+	// Validate base image signature sent by client matches
+	// server base image signature.
+	serverImageSignature := workDir + "/serverSignature"
+	cmdName := "rdiff"
+	args := []string{"signature", path, serverImageSignature}
+	cmd := exec.Command(cmdName, args...)
+	err := cmd.Run()
+	if err != nil {
+		success = false
+		info = "Failed to compute signature for " + path + ", error: " + err.Error()
+		return success, nil, info
+	}
+	signature, err = ioutil.ReadFile(serverImageSignature)
+	success = true
+	info = "Successfully computed server signature"
+
+	// TODO: delete workDir
+	return success, signature, info
+
+}
+
+func (s ukdServer) GetImageSignature(context context.Context, request *api.ImageSignatureRequest) (*api.ImageSignatureReply, error) {
+	grpclog.Printf("Signature request: image=%s", request.Path)
+	var success bool
+	var info string
+	var signature []byte
+
+	// TODO: check that image is not currently in use.
+	success, signature, info = ComputeSignature(request.Path)
+
+	reply := api.ImageSignatureReply{
+		Success:   success,
+		Signature: signature,
+		Info:      info}
+	grpclog.Printf("GetImageSignature request")
+	return &reply, nil
+}
+
+func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
+	var success bool
+	var info string
+
+	workDir, _ := ioutil.TempDir("", "ukd-update-stage-")
+
+	// Validate base image signature sent by client matches
+	// server base image signature.
+	serverImageSignature := workDir + "/serverSignature"
+	cmdName := "rdiff"
+	args := []string{"signature", base, serverImageSignature}
+	cmd := exec.Command(cmdName, args...)
+	err := cmd.Run()
+	serverSignature, err := ioutil.ReadFile(serverImageSignature)
+	defer os.RemoveAll(serverImageSignature)
+	if !bytes.Equal(serverSignature, basesig) {
+		success = false
+		info = "Diff was generated for a different base image than " + base
+		return success, info
+	}
+
+	// Write out diff to delta file.
+	deltaFile := workDir + "/deltaFile"
+	f, err := os.Create(deltaFile)
+	if err != nil {
+		grpclog.Printf("Failed to create temp file")
+		success = false
+		info = "Failed to create delta file " + deltaFile + ", error: " + err.Error()
+		return success, info
+	}
+	err = ioutil.WriteFile(deltaFile, diff, 0700)
+	f.Close()
+	defer os.RemoveAll(deltaFile)
+
+	updatedImagePath := workDir + "/newImage.img"
+	cmdName = "rdiff"
+	args = []string{"patch", base, deltaFile, updatedImagePath}
+	cmd = exec.Command(cmdName, args...)
+	err = cmd.Run()
+	if err != nil {
+		success = false
+		info = "Failed to patch (" + base + " with " + deltaFile + ", error: " + err.Error()
+	} else {
+		success = true
+		info = "Successfully staged patched image at " + updatedImagePath + ". Please validate the image before replacing master copy."
+	}
+
+	return success, info
+}
+
+func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImageRequest) (*api.UpdateImageReply, error) {
+	grpclog.Printf("Update request: base=%s", request.Base)
+	var success bool
+	var info string
+
+	// TODO: check that image is not currently in use.
+	success, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
+
+	reply := api.UpdateImageReply{
+		Success: success,
+		Info:    info}
+	grpclog.Printf("Update image request")
+	return &reply, nil
+}
+
 func NewServer() *ukdServer {
 	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
-		AppProcess: make(map[string]*os.Process)}
+		AppRuntime: make(map[string]*RuntimeInfo)}
+
+	// Image home.
+	imagePath := "/var/lib/ukd/images"
+	err := os.MkdirAll("/var/lib/ukd/images", 0700)
+	if err != nil {
+		grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
+	}
+
 	return s
 }
