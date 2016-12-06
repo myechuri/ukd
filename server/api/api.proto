@@ -65,10 +65,12 @@ message ImageSignatureReply {
 message UpdateImageRequest {
   string base = 1; // Base image.
   bytes basesig = 2; // Signature of the base image.
-  bytes diff = 3; // Diff of base image and new image.
+  bytes newsig = 3; // Signature of the new image.
+  bytes diff = 4; // Diff of base image and new image.
 }
 
 message UpdateImageReply {
   bool success = 1;
-  string info = 2; // Additional information.
+  string stagedImagePath = 2; // Fully qualified path to new staged image on server.
+  string info = 3; // Additional information.
 }

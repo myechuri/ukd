@@ -39,10 +39,10 @@ go install
 # ukdctl start --name testapp --image-location "/root/osv/build/last/usr.img" --hypervisor invalid
 2016/08/25 15:26:11 Application unikernel started: false, IP: , Info: Requested hypervisor (invalid) is not yet supported.
 
-# ukdctl update-image --oldImage "/destination-host-path/images/c/old.img" --newImage "/source-host-path/images/c/new.img"
-2016/12/01 08:35:14 Gathered signature of old image on ukd server
-2016/12/01 08:35:14 Calcuated diff of new image over old image: 982KB
-2016/12/01 08:35:14 Transmitting diff over..
-2016/12/01 08:35:14 Unikernel image update: true, Info: Successfully staged patched image at /tmp/ukd-update-stage-116243483/newImage.img. Please validate the image before replacing master copy.
-#
+# ukdctl update-image --oldImage "/destination-host-path/images/java/old.img" --newImage "/source-host-path/images/java/new.img"
+2016/12/05 17:33:56 Computed new image signature
+2016/12/05 17:33:56 Gathered signature of old image on destination
+2016/12/05 17:33:56 Calcuated diff of new image over old image: 2286KB
+2016/12/05 17:33:56 Transmitting diff over..
+2016/12/05 17:33:57 Unikernel image update: true, new image path on destination: /tmp/ukd-update-stage-227435982/newImage.img, Info: Verified signature match for new Image on source and destination
 ```
