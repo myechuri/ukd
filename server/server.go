@@ -19,15 +19,23 @@ type version_type struct {
 	Minor int32
 }
 
-type RuntimeInfo struct {
+const (
+	X86_64 = "x86_64"
+)
+
+type PlatformRuntimeInfo struct {
+	platform string
+}
+
+type AppRuntimeInfo struct {
 	Process *os.Process
 	Image   string
 }
 
 type ukdServer struct {
-	Version    version_type
-	AppRuntime map[string]*RuntimeInfo
-	// AppProcess map[string]*os.Process
+	Version         version_type
+	PlatformRuntime PlatformRuntimeInfo
+	AppRuntime      map[string]*AppRuntimeInfo
 }
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
@@ -90,7 +98,7 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip := strings.Fields(string(line))[1]
-	runtime := &RuntimeInfo{Process: cmd.Process,
+	runtime := &AppRuntimeInfo{Process: cmd.Process,
 		Image: location}
 	s.AppRuntime[name] = runtime
 
@@ -122,16 +130,23 @@ func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*a
 		return &reply, nil
 	}
 
+	var reply *api.StartReply
 	if request.Visor == "kvm-qemu" {
-		reply, _ := StartQemu(s, request.Name, request.Location)
-		return reply, nil
+		if s.PlatformRuntime.platform == X86_64 {
+			reply, _ = StartQemu(s, request.Name, request.Location)
+		} else {
+			reply = &api.StartReply{
+				Success: false,
+				Ip:      "",
+				Info:    "Platform " + s.PlatformRuntime.platform + " is not yet supported."}
+		}
 	} else {
-		reply := api.StartReply{
+		reply = &api.StartReply{
 			Success: false,
 			Ip:      "",
 			Info:    "Requested hypervisor (" + request.Visor + ") is not yet supported."}
-		return &reply, nil
 	}
+	return reply, nil
 }
 
 func (s ukdServer) Stop(context context.Context, request *api.StopRequest) (*api.StopReply, error) {
@@ -292,16 +307,36 @@ func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImage
 	return &reply, nil
 }
 
-func NewServer() *ukdServer {
-	s := &ukdServer{Version: version_type{Major: 0, Minor: 1},
-		AppRuntime: make(map[string]*RuntimeInfo)}
+func getPlatformRuntime() (PlatformRuntimeInfo, error) {
+
+	cmdName := "arch"
+	args := []string{}
+	cmd := exec.Command(cmdName, args...)
+	arch, err := cmd.Output()
+	platform := PlatformRuntimeInfo{platform: strings.TrimSpace(string(arch))}
+	grpclog.Printf("Detected arch: %s on the system", strings.TrimSpace(string(arch)))
+	return platform, err
+}
+
+func NewServer() (*ukdServer, error) {
+
+	var s *ukdServer
+	runtime, err := getPlatformRuntime()
+	if err != nil {
+		grpclog.Printf("Failed to detect runtime platform, error: %s", err.Error())
+		return s, err
+	}
+
+	s = &ukdServer{Version: version_type{Major: 0, Minor: 1},
+		PlatformRuntime: runtime,
+		AppRuntime:      make(map[string]*AppRuntimeInfo)}
 
 	// Image home.
 	imagePath := "/var/lib/ukd/images"
-	err := os.MkdirAll("/var/lib/ukd/images", 0700)
+	err = os.MkdirAll("/var/lib/ukd/images", 0700)
 	if err != nil {
 		grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
 	}
 
-	return s
+	return s, err
 }
