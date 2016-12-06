@@ -42,17 +42,21 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 		// Create and start grpc server for ukd
-		startUkdServer(protocol, port)
-		return nil
+		err := startUkdServer(protocol, port)
+		return err
 	}
 	app.Run(os.Args)
 }
 
 func startUkdServer(protocol string, port int64) error {
+	s, err := server.NewServer()
+	if err != nil {
+		return err
+	}
+
 	// TODO: Validate protocol and port.
 	lis, _ := net.Listen(protocol, fmt.Sprintf(":%d", port))
 	grpcServer := grpc.NewServer()
-	s := server.NewServer()
 	api.RegisterUkdServer(grpcServer, *s)
 
 	// TODO: TLS.
