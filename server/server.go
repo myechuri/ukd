@@ -190,7 +190,7 @@ func ComputeSignature(path string) (bool, []byte, string) {
 	}
 	signature, err = ioutil.ReadFile(serverImageSignature)
 	success = true
-	info = "Successfully computed server signature"
+	info = "Successfully computed signature"
 
 	// TODO: delete workDir
 	return success, signature, info
@@ -279,13 +279,16 @@ func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImage
 		if !bytes.Equal(newSignature, request.Newsig) {
 			success = false
 			info = "New image signature on destination does not match new image signature on source"
+		} else {
+			info = "Verified signature match for new Image on source and destination"
 		}
 	}
 
 	reply := api.UpdateImageReply{
-		Success: success,
-		Info:    info}
-	grpclog.Printf("Update image request")
+		Success:         success,
+		StagedImagePath: newImagePath,
+		Info:            info}
+	grpclog.Printf("UpdateImage: success: %t, staged image path: %s, info: %s", success, newImagePath, info)
 	return &reply, nil
 }
 

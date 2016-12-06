@@ -47,7 +47,7 @@ func updateImage(cmd *cobra.Command, args []string) {
 		return
 	}
 	newSignature, err = ioutil.ReadFile(newSignatureFile)
-	log.Printf("Successfully computed new image signature")
+	log.Printf("Computed new image signature")
 
 	// Step 2: Get signature of the old image on destination.
 	var baseSignature []byte
@@ -61,7 +61,7 @@ func updateImage(cmd *cobra.Command, args []string) {
 			oldImagePath, reply.Info)
 		return
 	}
-	log.Printf("Gathered signature of old image on ukd server")
+	log.Printf("Gathered signature of old image on destination")
 	baseSignature = reply.Signature
 	signatureFile := workDir + "/oldSignatureFile"
 	f, err = os.Create(signatureFile)
@@ -88,14 +88,14 @@ func updateImage(cmd *cobra.Command, args []string) {
 
 	updateImageRequest := &api.UpdateImageRequest{
 		Base:    oldImagePath,
-		Basesig: newSignature,
+		Basesig: baseSignature,
 		Newsig:  newSignature,
 		Diff:    diff,
 	}
 	log.Printf("Transmitting diff over..")
 	updateReply, _ := client.UpdateImage(context.Background(), updateImageRequest)
-	log.Printf("Unikernel image update: %t, Info: %s",
-		updateReply.Success, updateReply.Info)
+	log.Printf("Unikernel image update: %t, new image path on destination: %s, Info: %s",
+		updateReply.Success, updateReply.StagedImagePath, updateReply.Info)
 }
 
 func UpdateImageCommand() *cobra.Command {

@@ -71,5 +71,6 @@ message UpdateImageRequest {
 
 message UpdateImageReply {
   bool success = 1;
-  string info = 2; // Additional information.
+  string stagedImagePath = 2; // Fully qualified path to new staged image on server.
+  string info = 3; // Additional information.
 }
