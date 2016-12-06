@@ -73,11 +73,11 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		"-device", "isa-serial,chardev=stdio"}
 	cmd := exec.Command(cmdName, args...)
 
-        // Disable Glibc's per-thread arena to limit qemu virtual memory.
-        // [ References:
-        // 1. https://siddhesh.in/posts/malloc-per-thread-arenas-in-glibc.html
-        // 2. https://devcenter.heroku.com/articles/tuning-glibc-memory-behavior ]
-        cmd.Env = []string{"MALLOC_ARENA_MAX=1"}
+	// Disable Glibc's per-thread arena to limit qemu virtual memory.
+	// [ References:
+	// 1. https://siddhesh.in/posts/malloc-per-thread-arenas-in-glibc.html
+	// 2. https://devcenter.heroku.com/articles/tuning-glibc-memory-behavior ]
+	cmd.Env = []string{"MALLOC_ARENA_MAX=1"}
 
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
@@ -214,7 +214,7 @@ func (s ukdServer) GetImageSignature(context context.Context, request *api.Image
 	return &reply, nil
 }
 
-func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
+func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string, string) {
 	var success bool
 	var info string
 
@@ -232,7 +232,7 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 	if !bytes.Equal(serverSignature, basesig) {
 		success = false
 		info = "Diff was generated for a different base image than " + base
-		return success, info
+		return success, "", info
 	}
 
 	// Write out diff to delta file.
@@ -242,7 +242,7 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 		grpclog.Printf("Failed to create temp file")
 		success = false
 		info = "Failed to create delta file " + deltaFile + ", error: " + err.Error()
-		return success, info
+		return success, "", info
 	}
 	err = ioutil.WriteFile(deltaFile, diff, 0700)
 	f.Close()
@@ -261,7 +261,7 @@ func ApplyDiff(base string, basesig []byte, diff []byte) (bool, string) {
 		info = "Successfully staged patched image at " + updatedImagePath + ". Please validate the image before replacing master copy."
 	}
 
-	return success, info
+	return success, updatedImagePath, info
 }
 
 func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImageRequest) (*api.UpdateImageReply, error) {
@@ -270,7 +270,17 @@ func (s ukdServer) UpdateImage(context context.Context, request *api.UpdateImage
 	var info string
 
 	// TODO: check that image is not currently in use.
-	success, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
+	var newImagePath string
+	success, newImagePath, info = ApplyDiff(request.Base, request.Basesig, request.Diff)
+
+	if success {
+		var newSignature []byte
+		success, newSignature, info = ComputeSignature(newImagePath)
+		if !bytes.Equal(newSignature, request.Newsig) {
+			success = false
+			info = "New image signature on destination does not match new image signature on source"
+		}
+	}
 
 	reply := api.UpdateImageReply{
 		Success: success,
