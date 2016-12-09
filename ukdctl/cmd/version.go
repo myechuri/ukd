@@ -23,7 +23,7 @@ func getServerVersion(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("could not gather grpc server version: %v", err)
 	}
-	log.Printf("Ukd server version: %d.%d", reply.Major, reply.Minor)
+	log.Printf("Ukd server version: %d.%s", reply.Major, reply.Minor)
 }
 
 func VersionCommand() *cobra.Command {

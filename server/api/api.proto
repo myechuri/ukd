@@ -24,7 +24,7 @@ message VersionRequest {
 // Ukd server version.
 message VersionReply {
   int32 major = 1;
-  int32 minor = 2;
+  string minor = 2;
 }
 
 // Request message containing image name and image location.
