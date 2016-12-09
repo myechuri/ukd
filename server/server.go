@@ -16,7 +16,7 @@ import (
 
 type version_type struct {
 	Major int32
-	Minor int32
+	Minor string
 }
 
 const (
@@ -327,7 +327,7 @@ func NewServer() (*ukdServer, error) {
 		return s, err
 	}
 
-	s = &ukdServer{Version: version_type{Major: 0, Minor: 1},
+	s = &ukdServer{Version: version_type{Major: 0, Minor: "01"},
 		PlatformRuntime: runtime,
 		AppRuntime:      make(map[string]*AppRuntimeInfo)}
 
