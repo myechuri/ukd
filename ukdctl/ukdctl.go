@@ -28,6 +28,7 @@ func main() {
 	rootCmd.AddCommand(cmd.VersionCommand(),
 		cmd.StartCommand(),
 		cmd.StopCommand(),
+		cmd.StatusCommand(),
 		cmd.UpdateImageCommand())
 
 	if err := rootCmd.Execute(); err != nil {

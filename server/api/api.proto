@@ -16,6 +16,9 @@ service Ukd {
 
   // Update a Unikernel on-disk image.
   rpc UpdateImage (UpdateImageRequest) returns (UpdateImageReply) {}
+
+  // Status of an app.
+  rpc Status (StatusRequest) returns (StatusReply) {}
 }
 
 message VersionRequest {
@@ -72,5 +75,16 @@ message UpdateImageRequest {
 message UpdateImageReply {
   bool success = 1;
   string stagedImagePath = 2; // Fully qualified path to new staged image on server.
+  string info = 3; // Additional information.
+}
+
+message StatusRequest {
+  string name = 1;
+}
+
+// Response message signalling result of stop attempt.
+message StatusReply {
+  bool success = 1;
+  string status = 2;
   string info = 3; // Additional information.
 }

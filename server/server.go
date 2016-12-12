@@ -158,6 +158,27 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	return &reply, nil
 }
 
+func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (*api.StatusReply, error) {
+	grpclog.Printf("Status request: name: %s, Image: %s", request.Name)
+
+    
+	// Validate application name does not exist.
+	if s.AppRuntime[request.Name] != nil {
+		reply := api.StatusReply{
+			Success: true,
+			Status:      "RUNNING",
+			Info:    ""}
+		return &reply, nil
+	} else {
+		reply := api.StatusReply{
+			Success: true,
+			Status:      "STOPPED",
+			Info:    ""}
+		return &reply, nil
+        }
+
+}
+
 func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
 	grpclog.Printf("Start request: name: %s, Image: %s", request.Name, request.Location)
 
