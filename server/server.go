@@ -159,7 +159,7 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 }
 
 func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (*api.StatusReply, error) {
-	grpclog.Printf("Status request: name: %s, Image: %s", request.Name)
+	grpclog.Printf("Status request: name: %s", request.Name)
 
     
 	// Validate application name does not exist.
