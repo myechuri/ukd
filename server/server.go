@@ -93,6 +93,8 @@ func ComposeQemuAarch64Command(name string, location string) (string, []string, 
 		"-machine", "virt",
 		"-cpu", "cortex-a57",
 		"-kernel", location,
+		//"-serial", "stdio",
+		//"-monitor", "none",
 		"--nographic"}
 
 	return cmdName, args, nil
@@ -129,12 +131,22 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	r := bufio.NewReader(stdout)
 	matched := false
 	var line []byte
-	for !(matched) {
-		line, _, _ = r.ReadLine()
-		grpclog.Printf("%s", line)
-		matched, _ = regexp.MatchString("eth0:.*", string(line))
+	var ip string
+	if arch == X86_64 {
+		for !(matched) {
+			line, _, _ = r.ReadLine()
+			grpclog.Printf("%s", string(line))
+			matched, _ = regexp.MatchString("eth0:.*", string(line))
+		}
+		ip = strings.Fields(string(line))[1]
+	} else if arch == ARMv71 {
+		for !(matched) {
+			line, _, _ = r.ReadLine()
+			grpclog.Printf("%s", string(line))
+			matched, _ = regexp.MatchString("Hello World.*", string(line))
+		}
+		ip = "192.168.122.89"
 	}
-	ip := strings.Fields(string(line))[1]
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
 		Image: location}
 	s.AppRuntime[name] = runtime
