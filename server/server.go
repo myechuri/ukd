@@ -93,8 +93,6 @@ func ComposeQemuAarch64Command(name string, location string) (string, []string, 
 		"-machine", "virt",
 		"-cpu", "cortex-a57",
 		"-kernel", location,
-		//"-serial", "stdio",
-		//"-monitor", "none",
 		"--nographic"}
 
 	return cmdName, args, nil
@@ -377,7 +375,6 @@ func getPlatformRuntime() (PlatformRuntimeInfo, error) {
 	cmd := exec.Command(cmdName, args...)
 	archBytes, err := cmd.Output()
 	arch = strings.TrimSpace(string(archBytes))
-	arch = "armv71"
 	platformRuntimeInfo := PlatformRuntimeInfo{platform: arch}
 	grpclog.Printf("Detected arch: %s on the system", arch)
 	return platformRuntimeInfo, err
