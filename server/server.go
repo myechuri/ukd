@@ -88,6 +88,8 @@ func ComposeQemuX86_64Command(name string, location string) (string, []string, e
 
 func ComposeQemuAarch64Command(name string, location string) (string, []string, error) {
 
+	// Use user networking for now.
+	// TODO: add tap netdev.
 	cmdName := "qemu-system-aarch64"
 	args := []string{
 		"-machine", "virt",
@@ -130,21 +132,12 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	matched := false
 	var line []byte
 	var ip string
-	if arch == X86_64 {
-		for !(matched) {
-			line, _, _ = r.ReadLine()
-			grpclog.Printf("%s", string(line))
-			matched, _ = regexp.MatchString("eth0:.*", string(line))
-		}
-		ip = strings.Fields(string(line))[1]
-	} else if arch == ARMv71 {
-		for !(matched) {
-			line, _, _ = r.ReadLine()
-			grpclog.Printf("%s", string(line))
-			matched, _ = regexp.MatchString("Hello World.*", string(line))
-		}
-		ip = "192.168.122.89"
+	for !(matched) {
+		line, _, _ = r.ReadLine()
+		grpclog.Printf("%s", string(line))
+		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
+	ip = strings.Fields(string(line))[1]
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
 		Image: location}
 	s.AppRuntime[name] = runtime
@@ -159,21 +152,20 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (*api.StatusReply, error) {
 	grpclog.Printf("Status request: name: %s", request.Name)
 
-    
 	// Validate application name does not exist.
 	if s.AppRuntime[request.Name] != nil {
 		reply := api.StatusReply{
 			Success: true,
-			Status:      "RUNNING",
+			Status:  "RUNNING",
 			Info:    ""}
 		return &reply, nil
 	} else {
 		reply := api.StatusReply{
 			Success: true,
-			Status:      "STOPPED",
+			Status:  "STOPPED",
 			Info:    ""}
 		return &reply, nil
-        }
+	}
 
 }
 
