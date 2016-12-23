@@ -21,7 +21,7 @@ type version_type struct {
 
 const (
 	X86_64 = "x86_64"
-	ARMv71 = "armv71"
+	ARMv71 = "armv7l"
 )
 
 type PlatformRuntimeInfo struct {
