@@ -31,6 +31,7 @@ type PlatformRuntimeInfo struct {
 type AppRuntimeInfo struct {
 	Process *os.Process
 	Image   string
+        Ip      string
 }
 
 type ukdServer struct {
@@ -137,7 +138,7 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	}
 	ip := strings.Fields(string(line))[1]
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
-		Image: location}
+		Image: location, Ip: ip}
 	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
@@ -152,10 +153,11 @@ func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (
 
 	// Validate application name does not exist.
 	if s.AppRuntime[request.Name] != nil {
+                ip := s.AppRuntime[request.Name].Ip
 		reply := api.StatusReply{
 			Success: true,
 			Status:  "RUNNING",
-			Info:    ""}
+			Info:    "IP: " + ip}
 		return &reply, nil
 	} else {
 		reply := api.StatusReply{

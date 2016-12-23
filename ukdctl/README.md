@@ -45,4 +45,7 @@ go install
 2016/12/05 17:33:56 Calcuated diff of new image over old image: 2286KB
 2016/12/05 17:33:56 Transmitting diff over..
 2016/12/05 17:33:57 Unikernel image update: true, new image path on destination: /tmp/ukd-update-stage-227435982/newImage.img, Info: Verified signature match for new Image on source and destination
+
+# ukdctl status --name testapp
+2016/12/23 10:38:31 Application unikernel status check: true, status: RUNNING, Info: IP: 10.0.2.15
 ```
