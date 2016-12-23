@@ -134,7 +134,6 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	var ip string
 	for !(matched) {
 		line, _, _ = r.ReadLine()
-		grpclog.Printf("%s", string(line))
 		matched, _ = regexp.MatchString("eth0:.*", string(line))
 	}
 	ip = strings.Fields(string(line))[1]
