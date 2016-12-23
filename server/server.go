@@ -21,6 +21,7 @@ type version_type struct {
 
 const (
 	X86_64 = "x86_64"
+	ARMv71 = "armv7l"
 )
 
 type PlatformRuntimeInfo struct {
@@ -30,6 +31,7 @@ type PlatformRuntimeInfo struct {
 type AppRuntimeInfo struct {
 	Process *os.Process
 	Image   string
+        Ip      string
 }
 
 type ukdServer struct {
@@ -37,6 +39,8 @@ type ukdServer struct {
 	PlatformRuntime PlatformRuntimeInfo
 	AppRuntime      map[string]*AppRuntimeInfo
 }
+
+var arch string
 
 func (s ukdServer) GetVersion(context context.Context, request *api.VersionRequest) (*api.VersionReply, error) {
 	reply := api.VersionReply{
@@ -46,7 +50,7 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 	return &reply, nil
 }
 
-func StartQemu(s ukdServer, name string, location string) (*api.StartReply, error) {
+func ComposeQemuX86_64Command(name string, location string) (string, []string, error) {
 	driveArg := "file=" + location + ",if=none,id=hd0,cache=none,aio=native"
 
 	// Compose application-specific configuration.
@@ -79,6 +83,41 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		"-chardev", "stdio,mux=on,id=stdio,signal=off",
 		"-mon", "chardev=stdio,mode=readline,default",
 		"-device", "isa-serial,chardev=stdio"}
+
+	return cmdName, args, nil
+}
+
+func ComposeQemuAarch64Command(name string, location string) (string, []string, error) {
+
+	// Use user networking for now.
+	// TODO: add tap netdev.
+	cmdName := "qemu-system-aarch64"
+	args := []string{
+		"-machine", "virt",
+		"-cpu", "cortex-a57",
+		"-kernel", location,
+		"--nographic"}
+
+	return cmdName, args, nil
+}
+
+func StartQemu(s ukdServer, name string, location string) (*api.StartReply, error) {
+
+	var cmdName string
+	var args []string
+	// TODO: Handle error returned by ComposeQemu*
+	if arch == X86_64 {
+		cmdName, args, _ = ComposeQemuX86_64Command(name, location)
+	} else if arch == ARMv71 {
+		cmdName, args, _ = ComposeQemuAarch64Command(name, location)
+	} else {
+		reply := &api.StartReply{
+			Success: false,
+			Ip:      "",
+			Info:    "Platform " + arch + " is not yet supported."}
+		return reply, nil
+	}
+
 	cmd := exec.Command(cmdName, args...)
 
 	// Disable Glibc's per-thread arena to limit qemu virtual memory.
@@ -99,7 +138,7 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	}
 	ip := strings.Fields(string(line))[1]
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
-		Image: location}
+		Image: location, Ip: ip}
 	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
@@ -107,6 +146,27 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		Ip:      ip,
 		Info:    "Successful start"}
 	return &reply, nil
+}
+
+func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (*api.StatusReply, error) {
+	grpclog.Printf("Status request: name: %s", request.Name)
+
+	// Validate application name does not exist.
+	if s.AppRuntime[request.Name] != nil {
+                ip := s.AppRuntime[request.Name].Ip
+		reply := api.StatusReply{
+			Success: true,
+			Status:  "RUNNING",
+			Info:    "IP: " + ip}
+		return &reply, nil
+	} else {
+		reply := api.StatusReply{
+			Success: true,
+			Status:  "STOPPED",
+			Info:    ""}
+		return &reply, nil
+	}
+
 }
 
 func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*api.StartReply, error) {
@@ -132,14 +192,7 @@ func (s ukdServer) Start(context context.Context, request *api.StartRequest) (*a
 
 	var reply *api.StartReply
 	if request.Visor == "kvm-qemu" {
-		if s.PlatformRuntime.platform == X86_64 {
-			reply, _ = StartQemu(s, request.Name, request.Location)
-		} else {
-			reply = &api.StartReply{
-				Success: false,
-				Ip:      "",
-				Info:    "Platform " + s.PlatformRuntime.platform + " is not yet supported."}
-		}
+		reply, _ = StartQemu(s, request.Name, request.Location)
 	} else {
 		reply = &api.StartReply{
 			Success: false,
@@ -312,23 +365,24 @@ func getPlatformRuntime() (PlatformRuntimeInfo, error) {
 	cmdName := "arch"
 	args := []string{}
 	cmd := exec.Command(cmdName, args...)
-	arch, err := cmd.Output()
-	platform := PlatformRuntimeInfo{platform: strings.TrimSpace(string(arch))}
-	grpclog.Printf("Detected arch: %s on the system", strings.TrimSpace(string(arch)))
-	return platform, err
+	archBytes, err := cmd.Output()
+	arch = strings.TrimSpace(string(archBytes))
+	platformRuntimeInfo := PlatformRuntimeInfo{platform: arch}
+	grpclog.Printf("Detected arch: %s on the system", arch)
+	return platformRuntimeInfo, err
 }
 
 func NewServer() (*ukdServer, error) {
 
 	var s *ukdServer
-	runtime, err := getPlatformRuntime()
+	platform, err := getPlatformRuntime()
 	if err != nil {
 		grpclog.Printf("Failed to detect runtime platform, error: %s", err.Error())
 		return s, err
 	}
 
-	s = &ukdServer{Version: version_type{Major: 0, Minor: "01"},
-		PlatformRuntime: runtime,
+	s = &ukdServer{Version: version_type{Major: 0, Minor: "01dev"},
+		PlatformRuntime: platform,
 		AppRuntime:      make(map[string]*AppRuntimeInfo)}
 
 	// Image home.
