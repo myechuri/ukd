@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/myechuri/ukd/server/api"
+	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 	"io/ioutil"
@@ -32,10 +33,10 @@ type PlatformRuntimeInfo struct {
 }
 
 type AppRuntimeInfo struct {
-	Process *os.Process
-	Image   string
-	Ip      string
-	Log     string
+	Process     *os.Process
+	Image       string
+	Ip          string
+	Incarnation uuid.UUID
 }
 
 type ukdServer struct {
@@ -149,7 +150,11 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 
 	var cmdName string
 	var args []string
-	logLocation := LOG_PATH + "/" + name + ".log"
+
+	// Generate a uuid for in-use application incarnation.
+	appUuid := uuid.NewV4()
+
+	logLocation := getLogLocation(name, appUuid)
 	// TODO: Handle error returned by ComposeQemu*
 	if arch == X86_64 {
 		cmdName, args, _ = ComposeQemuX86_64Command(name, location, logLocation)
@@ -173,12 +178,13 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	cmd.Env = []string{"MALLOC_ARENA_MAX=1"}
 	cmd.Start()
 
+	// TODO: handle error path from retriving IP.
 	ip, _ := getAppIP(logLocation)
 
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
-		Image: location,
-		Ip:    ip,
-		Log:   logLocation}
+		Image:       location,
+		Ip:          ip,
+		Incarnation: appUuid}
 	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
@@ -188,10 +194,24 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	return &reply, nil
 }
 
+func getLogLocation(name string, incarnation uuid.UUID) string {
+	logLocation := LOG_PATH + "/" + name + "-" + incarnation.String() + ".log"
+	return logLocation
+}
+
 func (s ukdServer) GetLog(context context.Context, request *api.LogRequest) (*api.LogReply, error) {
 	grpclog.Printf("Log request: name: %s", request.Name)
 
-	logLocation := LOG_PATH + "/" + request.Name + ".log"
+	if s.AppRuntime[request.Name] == nil {
+		reply := api.LogReply{
+			Success:    true,
+			LogContent: nil,
+			Info:       "Application (" + request.Name + ") is currently stopped. No log to report."}
+		return &reply, nil
+	}
+	incarnation := s.AppRuntime[request.Name].Incarnation
+	logLocation := getLogLocation(request.Name, incarnation)
+
 	_, err := os.Stat(logLocation)
 	if err != nil {
 		reply := api.LogReply{
