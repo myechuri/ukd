@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type version_type struct {
@@ -20,8 +21,10 @@ type version_type struct {
 }
 
 const (
-	X86_64 = "x86_64"
-	ARMv71 = "armv7l"
+	X86_64     = "x86_64"
+	ARMv71     = "armv7l"
+	IMAGE_PATH = "/var/lib/ukd/images"
+	LOG_PATH   = "/var/log/ukd"
 )
 
 type PlatformRuntimeInfo struct {
@@ -31,7 +34,8 @@ type PlatformRuntimeInfo struct {
 type AppRuntimeInfo struct {
 	Process *os.Process
 	Image   string
-        Ip      string
+	Ip      string
+	Log     string
 }
 
 type ukdServer struct {
@@ -50,7 +54,7 @@ func (s ukdServer) GetVersion(context context.Context, request *api.VersionReque
 	return &reply, nil
 }
 
-func ComposeQemuX86_64Command(name string, location string) (string, []string, error) {
+func ComposeQemuX86_64Command(name string, location string, log string) (string, []string, error) {
 	driveArg := "file=" + location + ",if=none,id=hd0,cache=none,aio=native"
 
 	// Compose application-specific configuration.
@@ -65,6 +69,7 @@ func ComposeQemuX86_64Command(name string, location string) (string, []string, e
 	configRoot += "/qemu-ifup.sh"
 	ioutil.WriteFile(configRoot, qemuIfupByteArray, 0700) // TODO: check error
 	netdevArg := "tap,id=hn0,script=" + configRoot + ",vhost=on"
+	logFileArg := "file:" + log
 
 	cmdName := "qemu-system-x86_64"
 	args := []string{
@@ -82,7 +87,8 @@ func ComposeQemuX86_64Command(name string, location string) (string, []string, e
 		"-cpu", "host,+x2apic",
 		"-chardev", "stdio,mux=on,id=stdio,signal=off",
 		"-mon", "chardev=stdio,mode=readline,default",
-		"-device", "isa-serial,chardev=stdio"}
+		// "-device", "isa-serial,chardev=stdio"}
+		"-serial", logFileArg}
 
 	return cmdName, args, nil
 }
@@ -99,16 +105,56 @@ func ComposeQemuAarch64Command(name string, location string) (string, []string, 
 		"--nographic"}
 
 	return cmdName, args, nil
+
+}
+
+func getAppIP(log string) (string, error) {
+
+	time.Sleep(time.Second)
+	logFileExists := false
+	for !(logFileExists) {
+		_, err := os.Stat(log)
+		if err == nil {
+			logFileExists = true
+		}
+		time.Sleep(time.Second)
+	}
+
+	file, err := os.Open(log)
+	defer file.Close()
+
+	// TODO: Handle app restart case where there exists log file content from previous run.
+	r := bufio.NewReader(file)
+	matched := false
+	var line []byte
+	for !(matched) {
+		line, _, err = r.ReadLine()
+		if err != nil {
+			grpclog.Printf("Error %s reading %s, sleeping 5 seconds for log content to be available", err, log)
+			if err.Error() == "EOF" {
+				time.Sleep(5 * time.Second)
+			} else {
+				// TODO: Handle read errors.
+			}
+		} else {
+			matched, _ = regexp.MatchString("eth0:.*", string(line))
+		}
+	}
+	ip := strings.Fields(string(line))[1]
+
+	return ip, err
 }
 
 func StartQemu(s ukdServer, name string, location string) (*api.StartReply, error) {
 
 	var cmdName string
 	var args []string
+	logLocation := LOG_PATH + "/" + name + ".log"
 	// TODO: Handle error returned by ComposeQemu*
 	if arch == X86_64 {
-		cmdName, args, _ = ComposeQemuX86_64Command(name, location)
+		cmdName, args, _ = ComposeQemuX86_64Command(name, location, logLocation)
 	} else if arch == ARMv71 {
+		// TODO: Add log location.
 		cmdName, args, _ = ComposeQemuAarch64Command(name, location)
 	} else {
 		reply := &api.StartReply{
@@ -125,20 +171,14 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	// 1. https://siddhesh.in/posts/malloc-per-thread-arenas-in-glibc.html
 	// 2. https://devcenter.heroku.com/articles/tuning-glibc-memory-behavior ]
 	cmd.Env = []string{"MALLOC_ARENA_MAX=1"}
-
-	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
 
-	r := bufio.NewReader(stdout)
-	matched := false
-	var line []byte
-	for !(matched) {
-		line, _, _ = r.ReadLine()
-		matched, _ = regexp.MatchString("eth0:.*", string(line))
-	}
-	ip := strings.Fields(string(line))[1]
+	ip, _ := getAppIP(logLocation)
+
 	runtime := &AppRuntimeInfo{Process: cmd.Process,
-		Image: location, Ip: ip}
+		Image: location,
+		Ip:    ip,
+		Log:   logLocation}
 	s.AppRuntime[name] = runtime
 
 	reply := api.StartReply{
@@ -153,7 +193,7 @@ func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (
 
 	// Validate application name does not exist.
 	if s.AppRuntime[request.Name] != nil {
-                ip := s.AppRuntime[request.Name].Ip
+		ip := s.AppRuntime[request.Name].Ip
 		reply := api.StatusReply{
 			Success: true,
 			Status:  "RUNNING",
@@ -386,10 +426,15 @@ func NewServer() (*ukdServer, error) {
 		AppRuntime:      make(map[string]*AppRuntimeInfo)}
 
 	// Image home.
-	imagePath := "/var/lib/ukd/images"
-	err = os.MkdirAll("/var/lib/ukd/images", 0700)
+	err = os.MkdirAll(IMAGE_PATH, 0700)
 	if err != nil {
-		grpclog.Printf("MkdirAll failed %q: %s", imagePath, err)
+		grpclog.Printf("MkdirAll failed %q: %s", IMAGE_PATH, err)
+	}
+
+	// Log home.
+	err = os.MkdirAll(LOG_PATH, 0700)
+	if err != nil {
+		grpclog.Printf("MkdirAll failed %q: %s", LOG_PATH, err)
 	}
 
 	return s, err
