@@ -40,6 +40,7 @@ root@ubuntu# ukdctl stop --name testuk
 go get google.golang.org/grpc
 go get github.com/spf13/cobra
 go get github.com/urfave/cli
+go get github.com/satori/go.uuid
 ```
 
 #### Build and install ``ukd`` server

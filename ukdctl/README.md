@@ -48,4 +48,15 @@ go install
 
 # ukdctl status --name testapp
 2016/12/23 10:38:31 Application unikernel status check: true, status: RUNNING, Info: IP: 10.0.2.15
+
+# ukdctl log --name test1
+2017/01/25 10:12:08 Unikernel application log retrived: true, Info: 
+2017/01/25 10:12:08 Unikernel application log:
+OSv v0.24-174-gd82e1b3
+eth0: 192.168.122.89
+
+# ukdctl log --name test2
+2017/01/25 10:12:27 Unikernel application log retrived: true, Info: Application (test2) is currently stopped. No log to report.
+2017/01/25 10:12:27 Unikernel application log:
+
 ```
