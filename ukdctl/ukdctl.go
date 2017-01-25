@@ -29,7 +29,8 @@ func main() {
 		cmd.StartCommand(),
 		cmd.StopCommand(),
 		cmd.StatusCommand(),
-		cmd.UpdateImageCommand())
+		cmd.UpdateImageCommand(),
+		cmd.LogCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("failed to execute command: %v", err)
