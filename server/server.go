@@ -188,10 +188,36 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 	return &reply, nil
 }
 
+func (s ukdServer) GetLog(context context.Context, request *api.LogRequest) (*api.LogReply, error) {
+	grpclog.Printf("Log request: name: %s", request.Name)
+
+	logLocation := LOG_PATH + "/" + request.Name + ".log"
+	_, err := os.Stat(logLocation)
+	if err != nil {
+		reply := api.LogReply{
+			Success:    false,
+			LogContent: nil,
+			Info:       request.Name + "does not have a log at " + logLocation + "on the compute node."}
+		return &reply, nil
+	}
+	logContent, err := ioutil.ReadFile(logLocation)
+	if err != nil {
+		reply := api.LogReply{
+			Success:    false,
+			LogContent: nil,
+			Info:       "Failed to read content from " + logLocation + ", error: " + err.Error()}
+		return &reply, nil
+	}
+	reply := api.LogReply{
+		Success:    true,
+		LogContent: logContent,
+		Info:       "Sending log content for " + request.Name + " from " + logLocation}
+	return &reply, nil
+}
+
 func (s ukdServer) Status(context context.Context, request *api.StatusRequest) (*api.StatusReply, error) {
 	grpclog.Printf("Status request: name: %s", request.Name)
 
-	// Validate application name does not exist.
 	if s.AppRuntime[request.Name] != nil {
 		ip := s.AppRuntime[request.Name].Ip
 		reply := api.StatusReply{

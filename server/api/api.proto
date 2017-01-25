@@ -19,6 +19,9 @@ service Ukd {
 
   // Status of an app.
   rpc Status (StatusRequest) returns (StatusReply) {}
+
+  // Get log of an app.
+  rpc GetLog (LogRequest) returns (LogReply) {}
 }
 
 message VersionRequest {
@@ -82,9 +85,19 @@ message StatusRequest {
   string name = 1;
 }
 
-// Response message signalling result of stop attempt.
+// Response message with status of an application.
 message StatusReply {
   bool success = 1;
   string status = 2;
+  string info = 3; // Additional information.
+}
+
+message LogRequest {
+  string name = 1;
+}
+
+message LogReply {
+  bool success = 1;
+  bytes logContent = 2; // Log of the the application.
   string info = 3; // Additional information.
 }
