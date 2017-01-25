@@ -24,7 +24,7 @@ func getLog(cmd *cobra.Command, args []string) {
 	reply, _ := client.GetLog(context.Background(), logRequest)
 	log.Printf("Unikernel application log retrived: %t, Info: %s",
 		reply.Success, reply.Info)
-	log.Printf("Unikernel application log: %s", string(reply.LogContent))
+	log.Printf("Unikernel application log:\n%s", string(reply.LogContent))
 }
 
 func LogCommand() *cobra.Command {

@@ -208,10 +208,11 @@ func (s ukdServer) GetLog(context context.Context, request *api.LogRequest) (*ap
 			Info:       "Failed to read content from " + logLocation + ", error: " + err.Error()}
 		return &reply, nil
 	}
+	grpclog.Printf("Sending log content for %s from %s", request.Name, logLocation)
 	reply := api.LogReply{
 		Success:    true,
 		LogContent: logContent,
-		Info:       "Sending log content for " + request.Name + " from " + logLocation}
+		Info:       ""}
 	return &reply, nil
 }
 
