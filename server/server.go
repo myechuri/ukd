@@ -125,7 +125,6 @@ func getAppIP(log string) (string, error) {
 	file, err := os.Open(log)
 	defer file.Close()
 
-	// TODO: Handle app restart case where there exists log file content from previous run.
 	r := bufio.NewReader(file)
 	matched := false
 	var line []byte
@@ -141,7 +140,7 @@ func getAppIP(log string) (string, error) {
 		} else {
 			matched, _ = regexp.MatchString("eth0:.*", string(line))
 		}
-	}
+	} // TODO: add a timeout on waiting for Application IP to be available.
 	ip := strings.Fields(string(line))[1]
 
 	return ip, err
