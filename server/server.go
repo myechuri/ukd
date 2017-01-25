@@ -88,22 +88,23 @@ func ComposeQemuX86_64Command(name string, location string, log string) (string,
 		"-cpu", "host,+x2apic",
 		"-chardev", "stdio,mux=on,id=stdio,signal=off",
 		"-mon", "chardev=stdio,mode=readline,default",
-		// "-device", "isa-serial,chardev=stdio"}
 		"-serial", logFileArg}
 
 	return cmdName, args, nil
 }
 
-func ComposeQemuAarch64Command(name string, location string) (string, []string, error) {
+func ComposeQemuAarch64Command(name string, location string, log string) (string, []string, error) {
 
 	// Use user networking for now.
 	// TODO: add tap netdev.
 	cmdName := "qemu-system-aarch64"
+	logFileArg := "file:" + log
 	args := []string{
 		"-machine", "virt",
 		"-cpu", "cortex-a57",
 		"-kernel", location,
-		"--nographic"}
+		"--nographic",
+		"-serial", logFileArg}
 
 	return cmdName, args, nil
 
@@ -160,7 +161,7 @@ func StartQemu(s ukdServer, name string, location string) (*api.StartReply, erro
 		cmdName, args, _ = ComposeQemuX86_64Command(name, location, logLocation)
 	} else if arch == ARMv71 {
 		// TODO: Add log location.
-		cmdName, args, _ = ComposeQemuAarch64Command(name, location)
+		cmdName, args, _ = ComposeQemuAarch64Command(name, location, logLocation)
 	} else {
 		reply := &api.StartReply{
 			Success: false,
