@@ -2,17 +2,9 @@
 
 Unikernel runtime server on a compute node.
 
-## Installation
-
-### Prerequisites
-
-[KVM](https://help.ubuntu.com/community/KVM/Installation)
-
-### Install pre-built binaries (recommended)
+## 1. Install pre-built binaries (recommended)
 
 #### Linux
-
-Get the release binaries, and start ukd:
 
 ##### X86-64
 As ``root``:
@@ -46,15 +38,20 @@ hello-world-loop.img
 root@raspberrypi:~#
 ```
 
-#### Application lifecyle management using ``ukd`` and ``ukonvrt``
+## 2. Start ``ukd`` server
 
-Start ``ukd`` server:
+##### Prerequisites
+
+[KVM](https://help.ubuntu.com/community/KVM/Installation)
+
 ```
 # ukd
 2017/01/26 14:46:11 Detected arch: x86_64 on the system
 ```
 
-##### ``ukdctl start``
+## 3. Use ``ukdctl`` client to provision application
+
+##### 3.1 ``ukdctl start``
 
 Use ``ukdctl`` client to start sample application:
 ```
@@ -62,7 +59,7 @@ Use ``ukdctl`` client to start sample application:
 2017/01/26 14:47:26 Application unikernel started: true, IP: 192.168.122.89, Info: Successful start
 ```
 
-##### ``ukdctl status``
+##### 3.2 ``ukdctl status``
 
 Monitor status of a provisioned application:
 ```
@@ -70,7 +67,7 @@ Monitor status of a provisioned application:
 2017/01/26 14:48:18 Application unikernel status check: true, status: RUNNING, Info: IP: 192.168.122.89
 ```
 
-##### ``ukdctl log``
+##### 3.3 ``ukdctl log``
 
 Gather log output from an application:
 ```
@@ -83,15 +80,7 @@ Hello version 1 from C code
 #
 ```
 
-Gather log output from an application that might not be running:
-```
-# ukdctl log --name unknownApp
-2017/01/26 14:49:40 Unikernel application log retrived: true, Info: Application (unknownApp) is currently stopped. No log to report.
-2017/01/26 14:49:40 Unikernel application log:
-#
-```
-
-##### ``ukdctl stop``
+##### 3.4 ``ukdctl stop``
 
 Stop a running application:
 ```
@@ -100,7 +89,7 @@ Stop a running application:
 #
 ```
 
-##### ``ukdctl update-image``
+##### 3.5 ``ukdctl update-image``
 
 Update an application's on-disk image:
 ```
@@ -113,7 +102,7 @@ Update an application's on-disk image:
 #
 ```
 
-### Build from source
+### Build {ukd, ukdctl} from source
 
 #### Get Dependencies
 ```
