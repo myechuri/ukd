@@ -16,7 +16,7 @@ Get the release binaries, and start ukd:
 
 X86-64
 ```
-curl -L https://github.com/myechuri/ukd/releases/download/v0.1dev/ukd-v0.1dev-linux-x86-64.tar.gz 
+curl -O -L https://raw.githubusercontent.com/myechuri/ukd/master/releases/download/v0.1dev/ukd-v0.1dev-linux-x86-64.tar.gz
 tar xvzf ukd-v0.1dev-linux-x86-64.tar.gz 
 cd ukd-v0.1dev-linux-x86-64
 source install-x86-64.sh
@@ -24,7 +24,7 @@ source install-x86-64.sh
 
 Aarch64
 ```
-curl -L https://github.com/myechuri/ukd/releases/download/v0.1dev/ukd-v0.1dev-linux-aarch64.tar.gz
+curl -O -L https://raw.githubusercontent.com/myechuri/ukd/master/releases/download/v0.1dev/ukd-v0.1dev-linux-aarch64.tar.gz
 tar xvzf ukd-v0.1dev-linux-aarch64.tar.gz
 cd ukd-v0.1dev-linux-aarch64.tar.gz
 source install-aarch64.sh
