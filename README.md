@@ -41,7 +41,13 @@ root@raspberrypi:~#
 
 ##### Prerequisites
 
-[KVM](https://help.ubuntu.com/community/KVM/Installation)
+[KVM](https://help.ubuntu.com/community/KVM/Installation) and rdiff
+
+
+(For Ubuntu 16.04)
+```
+# apt-get install qemu-kvm libvirt-bin ubuntu-vm-builder bridge-utils rdiff
+```
 
 ##### X86-64
 ```
